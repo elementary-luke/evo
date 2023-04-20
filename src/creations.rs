@@ -1,24 +1,42 @@
 // use normal_rand::Rng as Rng;
+use std::ops::Add;
 use macroquad::color::*;
 use macroquad::window::*;
 use macroquad::shapes::*;
 use macroquad::qrand as rand;
 use std::cmp::min;
 
-pub struct Dot
+
+#[derive(Clone, Copy)]
+pub struct Point
 {
     pub x : f32,
     pub y : f32,
+}
+
+impl Add for Point
+{
+    type Output = Point;
+
+    fn add(self, other: Point) -> Point {
+        Point {x: self.x + other.x, y: self.y + other.y}
+    }
+}
+pub struct Dot
+{
+    pub pos : Point,
     pub r : f32,
     pub color : Color,
     pub friction : f32,
+    pub velocity : Point,
+    
 }
 
 impl Dot
 {
-    pub fn draw(&mut self, base_x : f32, base_y : f32)
+    pub fn draw(&mut self, body_pos : Point)
     {
-        draw_circle(self.x + base_x, self.y + base_y, self.r, self.color)
+        draw_circle((self.pos + body_pos).x, (self.pos + body_pos).y, self.r, self.color)
     }
 }
 
@@ -33,16 +51,15 @@ pub struct Muscle
 
 impl Muscle
 {
-    pub fn draw(&mut self, base_x: f32, base_y : f32, from_x : f32, to_x : f32, from_y : f32, to_y : f32)
+    pub fn draw(&mut self, body_pos : Point, from : Point, to : Point)
     {
-        draw_line(from_x + base_x, from_y + base_y, to_x + base_x, to_y + base_y, 3.0, RED);
+        draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, RED);
     }
 }
 
 pub struct Body
 {
-    pub x : f32,
-    pub y : f32,
+    pub pos : Point,
     pub circles : Vec<Dot>,
     pub muscles : Vec<Muscle>,
 }
@@ -53,7 +70,7 @@ impl Body
     {
         let circles : Vec<Dot> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let body : Body = Body {x: 0.0, y: 0.0, circles, muscles};
+        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles};
         body
     }
     pub fn new_random(x_bound : f32, y_bound : f32) -> Body
@@ -61,7 +78,7 @@ impl Body
         rand::srand(macroquad::miniquad::date::now() as u64);
         let circles : Vec<Dot> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let mut body : Body = Body {x: 0.0, y: 0.0, circles, muscles};
+        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles};
         
         for _ in 0..rand::gen_range(2, 10)
         {
@@ -81,11 +98,13 @@ impl Body
             //     break;
             // }
             
-            body.circles.push(Dot {x,
-                y, 
+            body.circles.push(Dot {
+                pos: Point {x, y},
                 r: 5.0, 
                 color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
-                friction: fr}); 
+                friction: fr,
+                velocity : Point {x : 0.0, y : 0.0}
+            }); 
         }
         
         // make sure every circle is connected
@@ -106,7 +125,7 @@ impl Body
         }
 
         //add a couple more random muscles between random circles but no repeats
-        let max_connections = body.circles.len() / 2 * (1..(body.circles.len()-2)).product::<usize>();
+        let max_connections = factorial(body.circles.len()) / (2 * factorial(body.circles.len()-2));
         if body.muscles.len() >= max_connections // dont continue if no more possible muscle additions are possible
         {
             return body;
@@ -137,15 +156,12 @@ impl Body
 
     pub fn draw(&mut self)
     {
-        self.muscles.iter_mut().for_each(|m| m.draw(self.x, self.y, self.circles[m.from].x, self.circles[m.to].x, self.circles[m.from].y, self.circles[m.to].y));
-        self.circles.iter_mut().for_each(|c| c.draw(self.x, self.y));
+        self.muscles.iter_mut().for_each(|m| m.draw(self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
+        self.circles.iter_mut().for_each(|c| c.draw(self.pos));
     }
 }
 
-
-// pub enum ObjTypes
-// {
-//     Dot(Dot),
-//     Muscle(Muscle),
-//     Body(Body),
-// }
+fn factorial(n : usize) -> usize
+{
+    (1..=n).product()
+}
