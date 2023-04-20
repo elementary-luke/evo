@@ -36,7 +36,7 @@ async fn main() {
 
         for i in 0..bodies.len()
         {
-            // bodies[i].update();
+            bodies[i].update();
             bodies[i].draw();
         }
         

@@ -8,6 +8,7 @@ use std::cmp::min;
 
 
 #[derive(Clone, Copy)]
+#[derive(Debug)]
 pub struct Point
 {
     pub x : f32,
@@ -22,6 +23,15 @@ impl Add for Point
         Point {x: self.x + other.x, y: self.y + other.y}
     }
 }
+
+impl Point 
+{
+    fn magnitude(&self) -> f32
+    {
+        (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()
+    }
+}
+
 pub struct Dot
 {
     pub pos : Point,
@@ -29,11 +39,36 @@ pub struct Dot
     pub color : Color,
     pub friction : f32,
     pub velocity : Point,
+    pub acceleration : Point,
     
 }
 
+
 impl Dot
 {
+    pub fn update(&mut self, body_pos : Point)
+    {
+        self.velocity.x += self.acceleration.x;
+        self.velocity.y += self.acceleration.y;
+
+        
+        
+        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-40.0
+        {
+            self.velocity.y = 0.0;
+        }
+        else 
+        {
+            self.velocity.y += 0.1;
+            
+        }
+
+        self.acceleration = Point {x : 0.0, y : 0.0};
+        //println!("{:?}", self.velocity);
+        self.pos.x += self.velocity.x;
+        self.pos.y += self.velocity.y;
+        
+    }
     pub fn draw(&mut self, body_pos : Point)
     {
         draw_circle((self.pos + body_pos).x, (self.pos + body_pos).y, self.r, self.color)
@@ -51,6 +86,10 @@ pub struct Muscle
 
 impl Muscle
 {
+    pub fn update(&mut self)
+    {
+        
+    }
     pub fn draw(&mut self, body_pos : Point, from : Point, to : Point)
     {
         draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, RED);
@@ -103,7 +142,8 @@ impl Body
                 r: 5.0, 
                 color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
                 friction: fr,
-                velocity : Point {x : 0.0, y : 0.0}
+                velocity : Point {x : 0.0, y : 0.0},
+                acceleration : Point {x : 0.0, y : 0.0},
             }); 
         }
         
@@ -158,6 +198,11 @@ impl Body
     {
         self.muscles.iter_mut().for_each(|m| m.draw(self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
         self.circles.iter_mut().for_each(|c| c.draw(self.pos));
+    }
+    pub fn update(&mut self)
+    {
+        self.muscles.iter_mut().for_each(|m| m.update());
+        self.circles.iter_mut().for_each(|c| c.update(self.pos));
     }
 }
 
