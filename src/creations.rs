@@ -9,6 +9,7 @@ use std::cmp::min;
 
 #[derive(Clone, Copy)]
 #[derive(Debug)]
+
 pub struct Point
 {
     pub x : f32,
@@ -26,6 +27,7 @@ impl Add for Point
 
 impl Point 
 {
+    const grav : f32 = 0.1;
     fn magnitude(&self) -> f32
     {
         (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()
@@ -40,7 +42,6 @@ pub struct Dot
     pub friction : f32,
     pub velocity : Point,
     pub acceleration : Point,
-    
 }
 
 
@@ -57,13 +58,8 @@ impl Dot
         {
             self.velocity.y = 0.0;
         }
-        else 
-        {
-            self.velocity.y += 0.1;
-            
-        }
 
-        self.acceleration = Point {x : 0.0, y : 0.0};
+        self.acceleration = Point {x : 0.0, y : Point::grav};
         //println!("{:?}", self.velocity);
         self.pos.x += self.velocity.x;
         self.pos.y += self.velocity.y;
@@ -143,7 +139,7 @@ impl Body
                 color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
                 friction: fr,
                 velocity : Point {x : 0.0, y : 0.0},
-                acceleration : Point {x : 0.0, y : 0.0},
+                acceleration : Point {x : 0.0, y : Point::grav},
             }); 
         }
         
