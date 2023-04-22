@@ -12,6 +12,7 @@ pub struct Circle
     pub color : Color,
     pub friction : f32,
     pub velocity : Point,
+    pub acceleration : Point,
     pub forces : Vec<Force>,
 }
 
@@ -20,30 +21,27 @@ impl Circle
 {
     pub fn update(&mut self, body_pos : Point)
     {
-        let mut impulse : Point = Point {x : 0.0, y : 0.0};
         for i in 0..self.forces.len()
         {
             match self.forces[i].from
             {
                 ForceTypes::Gravity => 
                 {
-                    self.velocity.y += Point::grav;
+                    self.acceleration.y += Point::grav;
                 },
                 ForceTypes::Muscle => 
                 {
-                    impulse += self.forces[i].strength;
+                    self.velocity = self.velocity + self.forces[i].strength;
                 },
             }
         }
         
-        self.velocity += impulse;
         
         if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-40.0
         {
             self.velocity.y = 0.0;
         }
-        //TODO add stuff for ground friction of ground
-
+        //println!("{:?}", self.velocity);
         self.pos.x += self.velocity.x;
         self.pos.y += self.velocity.y;
         
@@ -61,6 +59,7 @@ impl Circle
             color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
             friction: fr,
             velocity : Point {x : 0.0, y : 0.0},
+            acceleration : Point {x : 0.0, y : Point::grav},
             forces : vec![],
         }
     }

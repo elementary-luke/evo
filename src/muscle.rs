@@ -46,13 +46,13 @@ impl Muscle
                 x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
                 y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
             };
-            //circles[self.from].velocity = new_accel;
+            circles[self.from].velocity = new_accel;
             //circles[self.to].velocity = new_accel * Point {x: -1.0, y: -1.0};
 
-            circles[self.to].forces.push(Force {
-                from : ForceTypes::Muscle,
-                strength : new_accel,
-            });
+            // circles[self.from].forces.push(Force {
+            //     from : ForceTypes::Muscle,
+            //     strength : new_accel,
+            // });
         }
     }
 
