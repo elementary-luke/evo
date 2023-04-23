@@ -2,6 +2,7 @@ use std::ops::Add;
 use std::ops::Sub;
 use std::ops::Mul;
 use std::ops::AddAssign;
+use std::ops::MulAssign;
 
 #[derive(Clone, Copy)]
 #[derive(Debug)]
@@ -53,5 +54,13 @@ impl Mul for Point
 
     fn mul(self, other: Point) -> Point {
         Point {x: self.x * other.x, y: self.y * other.y}
+    }
+}
+
+impl MulAssign for Point
+{
+    fn mul_assign(&mut self, other: Point) {
+        self.x *= other.x;
+        self.y *= other.y;
     }
 }

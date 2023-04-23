@@ -21,6 +21,7 @@ impl Circle
 {
     pub fn update(&mut self, body_pos : Point)
     {
+        let mut impulse : Point = Point {x: 0.0, y: 0.0};
         for i in 0..self.forces.len()
         {
             match self.forces[i].from
@@ -31,19 +32,21 @@ impl Circle
                 },
                 ForceTypes::Muscle => 
                 {
-                    self.velocity = self.velocity + self.forces[i].strength;
+                    impulse += self.forces[i].strength;
                 },
             }
         }
-        
+        self.velocity = impulse;
+        self.forces.clear();
+        //self.velocity += self.acceleration;
         
         if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-40.0
         {
+            self.pos.y = screen_height()-40.0;
             self.velocity.y = 0.0;
         }
         //println!("{:?}", self.velocity);
-        self.pos.x += self.velocity.x;
-        self.pos.y += self.velocity.y;
+        self.pos += self.velocity;
         
     }
     pub fn draw(&mut self, body_pos : Point)

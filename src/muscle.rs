@@ -46,13 +46,43 @@ impl Muscle
                 x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
                 y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
             };
-            circles[self.from].velocity = new_accel;
-            //circles[self.to].velocity = new_accel * Point {x: -1.0, y: -1.0};
+            new_accel *= Point {x: self.strength, y: self.strength};
 
-            // circles[self.from].forces.push(Force {
-            //     from : ForceTypes::Muscle,
-            //     strength : new_accel,
-            // });
+            circles[self.from].forces.push(Force {
+                from : ForceTypes::Muscle,
+                strength : new_accel,
+            });
+            
+            circles[self.to].forces.push(Force {
+                from : ForceTypes::Muscle,
+                strength : new_accel * Point {x: -1.0, y: -1.0},
+            });
+        } 
+        else 
+        {
+            let mag = (self.extended_len - (circles[self.to].pos - circles[self.from].pos).magnitude()) / 2.0;
+            
+            let mut new_accel = Point {
+                    x : circles[self.from].pos.x - circles[self.to].pos.x,
+                    y : circles[self.from].pos.y - circles[self.to].pos.y,
+                };
+
+            new_accel = new_accel * Point { 
+                x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
+                y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
+            };
+
+            new_accel *= Point {x: self.strength, y: self.strength};
+
+            circles[self.from].forces.push(Force {
+                from : ForceTypes::Muscle,
+                strength : new_accel,
+            });
+            
+            circles[self.to].forces.push(Force {
+                from : ForceTypes::Muscle,
+                strength : new_accel * Point {x: -1.0, y: -1.0},
+            });
         }
     }
 
