@@ -23,11 +23,15 @@ impl Muscle
         if self.contracting.0 && time - self.contracting.1 >= self.contracted_time
         {
             self.contracting = (false, time);
+            println!("{:?}, {:?}", circles[0].friction, circles[0].pos.x);
+            println!("{:?}, {:?}", circles[1].friction, circles[1].pos.x);
             return;
         }
         else if !self.contracting.0 && time - self.contracting.1 >= self.extended_time
         {
             self.contracting = (true, time);
+            println!("{:?}, {:?}", circles[0].friction, circles[0].pos.x);
+            println!("{:?}, {:?} \n", circles[1].friction, circles[1].pos.x);
             return;
         }
         
@@ -37,51 +41,80 @@ impl Muscle
         {
             let mag = ((circles[self.to].pos - circles[self.from].pos).magnitude() - self.contracted_len) / 2.0;
             
-            let mut new_accel = Point {
+            let mut accel_from = Point {
                     x : circles[self.to].pos.x - circles[self.from].pos.x,
                     y : circles[self.to].pos.y - circles[self.from].pos.y,
                 };
 
-            new_accel = new_accel * Point { 
+            accel_from = accel_from * Point { 
                 x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
                 y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
             };
-            new_accel *= Point {x: self.strength, y: self.strength};
+            accel_from *= Point {x: self.strength, y: self.strength};
+            let mut accel_to = accel_from.clone() * Point { x: -1.0, y: -1.0 };
+            
+            // remake!
+            let mut temp = accel_to.clone();
+            if circles[self.from].on_floor
+            {
+                accel_to.x -=  accel_from.x - accel_from.x * (1.0 - circles[self.from].friction);
+                accel_from.x *= 1.0 - circles[self.from].friction;
+            }
+            else if circles[self.to].on_floor
+            {
+                accel_from.x -=  temp.x - temp.x * (1.0 - circles[self.to].friction);
+                temp.x *= 1.0 - circles[self.to].friction;
+            }
+                
 
             circles[self.from].forces.push(Force {
                 from : ForceTypes::Muscle,
-                strength : new_accel,
+                strength : accel_from,
             });
             
             circles[self.to].forces.push(Force {
                 from : ForceTypes::Muscle,
-                strength : new_accel * Point {x: -1.0, y: -1.0},
+                strength : accel_to
             });
         } 
         else 
         {
+            //TODO ADD extending OFF OF THE FLOOR
             let mag = (self.extended_len - (circles[self.to].pos - circles[self.from].pos).magnitude()) / 2.0;
             
-            let mut new_accel = Point {
+            let mut accel_from = Point {
                     x : circles[self.from].pos.x - circles[self.to].pos.x,
                     y : circles[self.from].pos.y - circles[self.to].pos.y,
                 };
 
-            new_accel = new_accel * Point { 
+            accel_from = accel_from * Point { 
                 x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
                 y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
             };
 
-            new_accel *= Point {x: self.strength, y: self.strength};
+            accel_from *= Point {x: self.strength, y: self.strength};
+            let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
+
+            let mut temp = accel_to.clone();
+            if circles[self.from].on_floor
+            {
+                accel_to.x -=  accel_from.x - accel_from.x * (1.0 - circles[self.from].friction);
+                accel_from.x *= (1.0 - circles[self.from].friction);
+            }
+            else if circles[self.to].on_floor
+            {
+                accel_from.x -=  temp.x - temp.x * (1.0 - circles[self.to].friction);
+                temp.x *= 1.0 - circles[self.to].friction;
+            }
 
             circles[self.from].forces.push(Force {
                 from : ForceTypes::Muscle,
-                strength : new_accel,
+                strength : accel_from,
             });
             
             circles[self.to].forces.push(Force {
                 from : ForceTypes::Muscle,
-                strength : new_accel * Point {x: -1.0, y: -1.0},
+                strength : accel_to,
             });
         }
     }
@@ -99,8 +132,8 @@ impl Muscle
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(0.0, 1.0),
-            extended_time : rand::gen_range(0.0, 1.0),
+            contracted_time : rand::gen_range(0.1, 1.0),
+            extended_time : rand::gen_range(0.1, 1.0),
             strength : rand::gen_range(0.0, 1.0), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
         }

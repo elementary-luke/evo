@@ -14,6 +14,7 @@ pub struct Circle
     pub velocity : Point,
     pub acceleration : Point,
     pub forces : Vec<Force>,
+    pub on_floor : bool,
 }
 
 
@@ -38,14 +39,20 @@ impl Circle
         }
         self.velocity = impulse;
         self.forces.clear();
-        //self.velocity += self.acceleration;
+        self.forces.push(Force {
+            from : ForceTypes::Gravity,
+            strength : Point {x: 0.0, y: Point::grav},
+        });
+        self.velocity += self.acceleration;
         
-        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-40.0
+        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-160.0
         {
-            self.pos.y = screen_height()-40.0;
+            //TODO move the circle to the floor
             self.velocity.y = 0.0;
+            self.acceleration.y = 0.0;
+            self.on_floor = true;
         }
-        //println!("{:?}", self.velocity);
+
         self.pos += self.velocity;
         
     }
@@ -62,8 +69,9 @@ impl Circle
             color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
             friction: fr,
             velocity : Point {x : 0.0, y : 0.0},
-            acceleration : Point {x : 0.0, y : Point::grav},
+            acceleration : Point {x : 0.0, y : 0.0},
             forces : vec![],
+            on_floor : false,
         }
     }
 }
