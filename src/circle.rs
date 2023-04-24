@@ -10,7 +10,7 @@ pub struct Circle
     pub pos : Point,
     pub r : f32,
     pub color : Color,
-    pub friction : f32,
+    pub slip : f32,
     pub velocity : Point,
     pub acceleration : Point,
     pub forces : Vec<Force>,
@@ -52,8 +52,13 @@ impl Circle
             self.acceleration.y = 0.0;
             self.on_floor = true;
         }
+        if self.on_floor && self.pos.y < screen_height()-160.0
+        {
+            self.on_floor = false;
+        }
 
         self.pos += self.velocity;
+
         
     }
     pub fn draw(&mut self, body_pos : Point)
@@ -67,7 +72,7 @@ impl Circle
             pos,
             r: 5.0, 
             color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
-            friction: fr,
+            slip: fr,
             velocity : Point {x : 0.0, y : 0.0},
             acceleration : Point {x : 0.0, y : 0.0},
             forces : vec![],

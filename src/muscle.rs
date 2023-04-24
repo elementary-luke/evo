@@ -13,7 +13,7 @@ pub struct Muscle
     pub contracted_time : f32,
     pub extended_time : f32,
     pub strength : f32,
-    pub contracting : (bool, f32), // bool is if it is contracting, i32 is the time it started contracting
+    pub contracting : (bool, f32), // bool is if it is contracting, f32 is the time it started contracting
 }
 
 impl Muscle
@@ -23,15 +23,11 @@ impl Muscle
         if self.contracting.0 && time - self.contracting.1 >= self.contracted_time
         {
             self.contracting = (false, time);
-            println!("{:?}, {:?}", circles[0].friction, circles[0].pos.x);
-            println!("{:?}, {:?}", circles[1].friction, circles[1].pos.x);
             return;
         }
         else if !self.contracting.0 && time - self.contracting.1 >= self.extended_time
         {
             self.contracting = (true, time);
-            println!("{:?}, {:?}", circles[0].friction, circles[0].pos.x);
-            println!("{:?}, {:?} \n", circles[1].friction, circles[1].pos.x);
             return;
         }
         
@@ -42,9 +38,9 @@ impl Muscle
             let mag = ((circles[self.to].pos - circles[self.from].pos).magnitude() - self.contracted_len) / 2.0;
             
             let mut accel_from = Point {
-                    x : circles[self.to].pos.x - circles[self.from].pos.x,
-                    y : circles[self.to].pos.y - circles[self.from].pos.y,
-                };
+                x : circles[self.to].pos.x - circles[self.from].pos.x,
+                y : circles[self.to].pos.y - circles[self.from].pos.y,
+            };
 
             accel_from = accel_from * Point { 
                 x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
@@ -53,19 +49,35 @@ impl Muscle
             accel_from *= Point {x: self.strength, y: self.strength};
             let mut accel_to = accel_from.clone() * Point { x: -1.0, y: -1.0 };
             
-            // remake!
-            let mut temp = accel_to.clone();
-            if circles[self.from].on_floor
+            if circles[self.from].on_floor && circles[self.to].on_floor
             {
-                accel_to.x -=  accel_from.x - accel_from.x * (1.0 - circles[self.from].friction);
-                accel_from.x *= 1.0 - circles[self.from].friction;
+                let total_slip = (circles[self.from].slip + circles[self.to].slip);
+                let x_movement = (accel_to.x.abs() + accel_from.x.abs()) * total_slip / 2.0;
+                if total_slip > 0.0
+                {
+                    accel_from.x = accel_from.x.signum() * circles[self.from].slip / total_slip * x_movement;
+                    accel_to.x = accel_to.x.signum() *  circles[self.to].slip / total_slip * x_movement;
+                }
+                else 
+                {
+                    accel_from.x = 0.0;
+                    accel_to.x = 0.0;
+                }
             }
-            else if circles[self.to].on_floor
+            else if circles[self.from].on_floor != circles[self.to].on_floor
             {
-                accel_from.x -=  temp.x - temp.x * (1.0 - circles[self.to].friction);
-                temp.x *= 1.0 - circles[self.to].friction;
+                if circles[self.from].on_floor
+                {
+                    accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip).abs();
+                    accel_from.x *= circles[self.from].slip;
+                }
+                else
+                {
+                    accel_from.x -= accel_to.x - (accel_to.x * circles[self.from].slip).abs();
+                    accel_to.x *= circles[self.to].slip;
+                }
             }
-                
+            
 
             circles[self.from].forces.push(Force {
                 from : ForceTypes::Muscle,
@@ -95,16 +107,41 @@ impl Muscle
             accel_from *= Point {x: self.strength, y: self.strength};
             let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
 
-            let mut temp = accel_to.clone();
-            if circles[self.from].on_floor
+            if circles[self.from].on_floor && circles[self.to].on_floor
             {
-                accel_to.x -=  accel_from.x - accel_from.x * (1.0 - circles[self.from].friction);
-                accel_from.x *= (1.0 - circles[self.from].friction);
+                let total_slip = (circles[self.from].slip + circles[self.to].slip);
+                let x_movement = (accel_to.x.abs() + accel_from.x.abs()) * total_slip / 2.0;
+                if total_slip > 0.0
+                {
+                    accel_from.x = accel_from.x.signum() * circles[self.from].slip / total_slip * x_movement;
+                    accel_to.x = accel_to.x.signum() *  circles[self.to].slip / total_slip * x_movement;
+                }
+                else 
+                {
+                    accel_from.x = 0.0;
+                    accel_to.x = 0.0;
+                }
             }
-            else if circles[self.to].on_floor
+            else if circles[self.from].on_floor != circles[self.to].on_floor
             {
-                accel_from.x -=  temp.x - temp.x * (1.0 - circles[self.to].friction);
-                temp.x *= 1.0 - circles[self.to].friction;
+                if circles[self.from].on_floor
+                {
+                    accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip).abs();
+                    accel_from.x *= circles[self.from].slip;
+                    if accel_from.y < 0.0
+                    {
+                        accel_to.y -= accel_from.y;
+                    }
+                }
+                else
+                {
+                    accel_from.x -= accel_to.x - (accel_to.x * circles[self.from].slip).abs();
+                    accel_to.x *= circles[self.to].slip;
+                    if accel_to.y < 0.0
+                    {
+                        accel_from.y -= accel_to.y;
+                    }
+                }
             }
 
             circles[self.from].forces.push(Force {
