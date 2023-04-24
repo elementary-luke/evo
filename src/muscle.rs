@@ -107,6 +107,7 @@ impl Muscle
             accel_from *= Point {x: self.strength, y: self.strength};
             let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
 
+
             if circles[self.from].on_floor && circles[self.to].on_floor
             {
                 let total_slip = (circles[self.from].slip + circles[self.to].slip);

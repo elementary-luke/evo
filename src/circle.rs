@@ -43,16 +43,19 @@ impl Circle
             from : ForceTypes::Gravity,
             strength : Point {x: 0.0, y: Point::grav},
         });
-        self.velocity += self.acceleration;
+
+        //self.velocity += self.acceleration;
+        self.velocity += Point {x:0.0, y: Point::grav};
         
-        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= screen_height()-160.0
+        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= 400.0
         {
             //TODO move the circle to the floor
+            self.pos.y += 400.0 - (body_pos.y + self.pos.y + self.r);
             self.velocity.y = 0.0;
             self.acceleration.y = 0.0;
             self.on_floor = true;
         }
-        if self.on_floor && self.pos.y < screen_height()-160.0
+        if self.on_floor && body_pos.y + self.pos.y < 400.0 - self.r
         {
             self.on_floor = false;
         }

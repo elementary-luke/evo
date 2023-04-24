@@ -32,37 +32,7 @@ async fn main() {
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
     bodies.push(Body::new_random(200.0 , 200.0));
-    // bodies.push(Body::new());
-    // bodies[0].circles.push(Circle {
-    //     pos : Point {x : -0.0, y : -10.0},
-    //     r: 5.0, 
-    //     color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-    //     slip: 0.5,
-    //     velocity : Point {x : 0.0, y : 0.0},
-    //     acceleration : Point {x : 0.0, y : 0.0},
-    //     forces : vec![],
-    //     on_floor : false,
-    // });
-    // bodies[0].circles.push(Circle {
-    //     pos : Point {x : 0.0, y : 10.0},
-    //     r: 5.0, 
-    //     color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-    //     slip: 0.5,
-    //     velocity : Point {x : 0.0, y : 0.0},
-    //     acceleration : Point {x : 0.0, y : 0.0},
-    //     forces : vec![],
-    //     on_floor : false,
-    // });
-    // bodies[0].muscles.push(Muscle {
-    //     from : 0,
-    //     to : 1,
-    //     strength : 0.6,
-    //     contracted_len : 10.0,
-    //     extended_len : 160.0,
-    //     contracted_time : 0.8,
-    //     extended_time : 0.8,
-    //     contracting : (false, 0.0),
-    // });
+    //testing(&mut bodies);
     bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0};
     println!("circles: {}", bodies[0].circles.len());
 
@@ -88,4 +58,59 @@ async fn main() {
         next_frame().await
     }
 
+}
+
+fn testing(bodies : &mut Vec<Body>)
+{
+    bodies.push(Body::new());
+    bodies[0].circles.push(Circle {
+        pos : Point {x : -10.0, y : 0.0},
+        r: 5.0, 
+        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+        slip: 0.0,
+        velocity : Point {x : 0.0, y : 0.0},
+        acceleration : Point {x : 0.0, y : 0.0},
+        forces : vec![],
+        on_floor : false,
+    });
+    bodies[0].circles.push(Circle {
+        pos : Point {x : 10.0, y : 0.0},
+        r: 5.0, 
+        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+        slip: 0.0,
+        velocity : Point {x : 0.0, y : 0.0},
+        acceleration : Point {x : 0.0, y : 0.0},
+        forces : vec![],
+        on_floor : false,
+    });
+    bodies[0].circles.push(Circle {
+        pos : Point {x : 0.0, y : -10.0},
+        r: 5.0, 
+        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+        slip: 0.5,
+        velocity : Point {x : 0.0, y : 0.0},
+        acceleration : Point {x : 0.0, y : 0.0},
+        forces : vec![],
+        on_floor : false,
+    });
+    bodies[0].muscles.push(Muscle {
+        from : 0,
+        to : 2,
+        strength : 0.6,
+        contracted_len : 80.0,
+        extended_len : 90.0,
+        contracted_time : 0.8,
+        extended_time : 10.0,
+        contracting : (false, 0.0),
+    });
+    bodies[0].muscles.push(Muscle {
+        from : 1,
+        to : 2,
+        strength : 0.6,
+        contracted_len : 80.0,
+        extended_len : 90.0,
+        contracted_time : 0.8,
+        extended_time : 10.0,
+        contracting : (false, 0.0),
+    });
 }
