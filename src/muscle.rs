@@ -4,6 +4,8 @@ use crate::force::*;
 use macroquad::qrand as rand;
 use macroquad::color::*;
 use macroquad::prelude::draw_line;
+
+#[derive(Clone)]
 pub struct Muscle
 {
     pub from : usize, // index of circles list
@@ -15,6 +17,7 @@ pub struct Muscle
     pub strength : f32,
     pub contracting : (bool, f32), // bool is if it is contracting, f32 is the time it started contracting
 }
+
 
 impl Muscle
 {

@@ -4,8 +4,10 @@ use crate::muscle::*;
 use macroquad::qrand as rand;
 use std::cmp::min;
 
+#[derive(Clone)]
 pub struct Body
 {
+    pub start_avg_x : f32,
     pub pos : Point,
     pub circles : Vec<Circle>,
     pub muscles : Vec<Muscle>,
@@ -17,7 +19,7 @@ impl Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles};
+        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0};
         body
     }
     pub fn new_random(x_bound : f32, y_bound : f32) -> Body
@@ -25,7 +27,7 @@ impl Body
         rand::srand(macroquad::miniquad::date::now() as u64);
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles};
+        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0};
         
         for _ in 0..rand::gen_range(2, 10) //REVERT TO 2, 10
         {
@@ -83,7 +85,12 @@ impl Body
                 break;
             }
         }
+        body.start_avg_x = body.circles.iter().map(|c| c.pos.x).sum::<f32>() / body.circles.len() as f32;
         body
+    }
+    pub fn set_start_avg(&mut self)
+    {
+        self.start_avg_x = self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32;
     }
 
     pub fn draw(&mut self)
@@ -96,7 +103,24 @@ impl Body
         self.muscles.iter_mut().for_each(|m| m.update(time, &mut self.circles));
         self.circles.iter_mut().for_each(|c| c.update(self.pos));
     }
-
+    pub fn get_average_distance(&self) -> f32
+    {
+        self.start_avg_x - self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32
+    }
+    pub fn simulate(&mut self) -> f32
+    {
+        let mut time = 0.0;
+        loop
+        {
+            time += 1.0/60.0;
+            self.update(time);
+            if time > 10.0
+            {
+                return self.get_average_distance().abs();
+            }
+        }
+        
+    }
 }
 
 fn factorial(n : usize) -> usize

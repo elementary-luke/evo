@@ -5,6 +5,7 @@ use macroquad::window::*;
 use macroquad::qrand as rand;
 use macroquad::prelude::draw_circle;
 
+#[derive(Clone)]
 pub struct Circle
 {
     pub pos : Point,
