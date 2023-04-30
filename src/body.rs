@@ -30,7 +30,7 @@ impl Body
         let muscles : Vec<Muscle> = Vec::new();
         let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None};
         
-        for _ in 0..rand::gen_range(2, 5) //REVERT TO 2, 10
+        for _ in 0..rand::gen_range(2, 4) //REVERT TO 2, 10
         {
             let x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
             let y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);
@@ -70,7 +70,8 @@ impl Body
         {   
             return body;
         }
-        for _ in 0..(rand::gen_range(0, (max_connections - body.muscles.len() + 1)) as usize)
+        
+        for _ in 0..(rand_biased(0, (max_connections - body.muscles.len()) as i32, 20.0) as usize)
         {
             //might be too rng and take too long so might have to change VV
             loop
@@ -115,6 +116,10 @@ impl Body
         {
             time += 1.0/60.0;
             self.update(time);
+            if self.get_average_distance().is_nan()
+            {
+                return 0.0;
+            }
             if self.circles.iter().all(|c| c.on_floor)
             {
                 return self.get_average_distance();
@@ -134,7 +139,12 @@ impl Body
     }
     pub fn mutate(&mut self)
     {
-        if  rand::gen_range(1, 6) == 1
+        let mut min = 1;
+        if self.circles.len() > Settings::MAX_CIRCLES
+        {
+            min = 2;
+        }
+        if  rand::gen_range(min, 6) == 1
         {
             self.major_change();
         }

@@ -18,7 +18,7 @@ use macroquad::qrand as rand;
 use macroquad::ui::*;
 use macroquad::ui::widgets::Button;
 use macroquad::math::vec2;
-use std::f32::NAN;
+use macroquad::input::*;
 
 
 fn window_conf() -> Conf {
@@ -43,7 +43,7 @@ async fn main() {
     bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
     create(&mut bodies, 100);
     simulate(&mut bodies);
-    for _ in 0..10
+    for _ in 0..30
     {
         kill(&mut bodies);
         repopulate(&mut bodies);
@@ -70,8 +70,12 @@ async fn main() {
         let next_gen = Button::new("Next Gen")
             .position(vec2(40.0, 50.0))
             .size(vec2(40.0, 50.0))
-            .ui(&mut root_ui())
-            ;
+            .ui(&mut root_ui());
+        if time.floor() == 10.0
+        {
+            println!("{}", bodies[0].get_average_distance());
+        }
+
         draw_text(&time.to_string(), 20.0, 20.0, 30.0, DARKGRAY);
         draw_text(&bodies[0].get_average_distance().to_string(), 20.0, 40.0, 30.0, DARKGRAY);
         next_frame().await
