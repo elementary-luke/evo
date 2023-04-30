@@ -1,13 +1,13 @@
 use crate::point::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ForceTypes
 {
     Gravity,
     Muscle,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Force
 {
     pub from : ForceTypes,

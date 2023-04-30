@@ -5,7 +5,7 @@ use macroquad::window::*;
 use macroquad::qrand as rand;
 use macroquad::prelude::draw_circle;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Circle
 {
     pub pos : Point,
@@ -71,16 +71,32 @@ impl Circle
     }
     pub fn new_random(pos : Point) -> Circle
     {
-        let fr = rand::gen_range(0.0, 1.0);
+        let slip = rand::gen_range(0.0, 0.4);
         Circle {
             pos,
             r: 5.0, 
-            color: Color { r: fr, g: fr, b: fr, a : 1.0}, 
-            slip: fr,
+            color: Color { r: slip, g: slip, b: slip, a : 1.0}, 
+            slip,
             velocity : Point {x : 0.0, y : 0.0},
             acceleration : Point {x : 0.0, y : 0.0},
             forces : vec![],
             on_floor : false,
+        }
+    }
+    pub fn mutate(&mut self)
+    {
+        for i in 0..2
+        {
+            match rand::gen_range(0, 2)
+            {
+                0 => self.pos.x += rand::gen_range(-5.0, 5.0),
+                1 => self.pos.y += rand::gen_range(-5.0, 5.0),
+                2 => {
+                    self.slip += rand::gen_range(-0.1, 0.1);
+                    self.slip = self.slip.clamp(0.0, 1.0);
+                },
+                _ => (),
+            }
         }
     }
 }
