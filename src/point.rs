@@ -14,7 +14,6 @@ pub struct Point
 
 impl Point 
 {
-    pub const grav : f32 = 3.2; // REVERT TO 3.2
     pub fn magnitude(&self) -> f32
     {
         (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()

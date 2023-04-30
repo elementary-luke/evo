@@ -1,5 +1,6 @@
 use crate::point::*;
 use crate::force::*;
+use crate::settings::Settings;
 use macroquad::color::*;
 use macroquad::window::*;
 use macroquad::qrand as rand;
@@ -30,7 +31,7 @@ impl Circle
             {
                 ForceTypes::Gravity => 
                 {
-                    self.acceleration.y += Point::grav;
+                    self.acceleration.y += Settings::GRAV;
                 },
                 ForceTypes::Muscle => 
                 {
@@ -42,21 +43,21 @@ impl Circle
         self.forces.clear();
         self.forces.push(Force {
             from : ForceTypes::Gravity,
-            strength : Point {x: 0.0, y: Point::grav},
+            strength : Point {x: 0.0, y: Settings::GRAV},
         });
 
         //self.velocity += self.acceleration;
-        self.velocity += Point {x:0.0, y: Point::grav};
+        self.velocity += Point {x:0.0, y: Settings::GRAV};
         
-        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= 400.0
+        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= Settings::FLOOR_Y
         {
             //TODO move the circle to the floor
-            self.pos.y += 400.0 - (body_pos.y + self.pos.y + self.r);
+            self.pos.y += Settings::FLOOR_Y - (body_pos.y + self.pos.y + self.r);
             self.velocity.y = 0.0;
             self.acceleration.y = 0.0;
             self.on_floor = true;
         }
-        if self.on_floor && body_pos.y + self.pos.y < 400.0 - self.r
+        if self.on_floor && body_pos.y + self.pos.y < Settings::FLOOR_Y - self.r
         {
             self.on_floor = false;
         }
@@ -71,7 +72,7 @@ impl Circle
     }
     pub fn new_random(pos : Point) -> Circle
     {
-        let slip = rand::gen_range(0.0, 0.4);
+        let slip = rand::gen_range(Settings::SLIP_MIN, Settings::SLIP_MAX);
         Circle {
             pos,
             r: 5.0, 
@@ -85,14 +86,20 @@ impl Circle
     }
     pub fn mutate(&mut self)
     {
-        for i in 0..2
+        for _ in 0..2// change to how many mutations you want
         {
-            match rand::gen_range(0, 2)
+            match rand::gen_range(0, 3)
             {
-                0 => self.pos.x += rand::gen_range(-5.0, 5.0),
-                1 => self.pos.y += rand::gen_range(-5.0, 5.0),
+                0 => {
+                    self.pos.x += rand::gen_range(-50.0, 50.0);
+                    self.pos.x = self.pos.x.clamp(-Settings::X_BOUND, Settings::X_BOUND);
+                },
+                1 => {
+                    self.pos.y += rand::gen_range(-50.0, 50.0);
+                    self.pos.y = self.pos.y.clamp(-Settings::Y_BOUND, Settings::Y_BOUND);
+                },
                 2 => {
-                    self.slip += rand::gen_range(-0.1, 0.1);
+                    self.slip += rand::gen_range(-0.2, 0.2);
                     self.slip = self.slip.clamp(0.0, 1.0);
                 },
                 _ => (),

@@ -79,6 +79,7 @@ impl Muscle
         {
             if circles[self.from].on_floor
             {
+                //accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip).abs(); makes them move forwards more
                 accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip);
                 accel_from.x *= circles[self.from].slip;
                 if accel_from.y < 0.0
@@ -129,16 +130,16 @@ impl Muscle
     }
     pub fn mutate(&mut self)
     {
-        for i in 0..2
+        for _ in 0..2
         {
             match rand::gen_range(0, 5)
             {
-                0 => self.contracted_len += rand::gen_range(-10.0, 10.0),
-                1 => self.extended_len += rand::gen_range(-10.0, 10.0),
-                2 => self.contracted_time += rand::gen_range(-0.1, 0.1),
-                3 => self.extended_time += rand::gen_range(-0.1, 0.1),
+                0 => self.contracted_len += rand::gen_range(-20.0, 20.0),
+                1 => self.extended_len += rand::gen_range(-20.0, 20.0),
+                2 => self.contracted_time += rand::gen_range(-0.2, 0.2),
+                3 => self.extended_time += rand::gen_range(-0.2, 0.2),
                 4 => {
-                    self.strength += rand::gen_range(-0.1, 0.1);
+                    self.strength += rand::gen_range(-0.2, 0.2);
                     self.strength = self.strength.clamp(0.0, 1.0);
                 },
                 5 => self.contracting.0 = !self.contracting.0,

@@ -1,6 +1,7 @@
 use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
+use crate::settings::Settings;
 use macroquad::qrand as rand;
 use std::cmp::min;
 
@@ -25,12 +26,11 @@ impl Body
     }
     pub fn new_random(x_bound : f32, y_bound : f32) -> Body
     {
-        rand::srand(macroquad::miniquad::date::now() as u64);
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
         let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None};
         
-        for _ in 0..rand::gen_range(5, 6) //REVERT TO 2, 10
+        for _ in 0..rand::gen_range(2, 5) //REVERT TO 2, 10
         {
             let x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
             let y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);
@@ -134,65 +134,62 @@ impl Body
     }
     pub fn mutate(&mut self)
     {
-        if  rand::gen_range(1, 5) == 1
+        if  rand::gen_range(1, 6) == 1
         {
-            if rand::gen_range(0, 2) == 1
+            self.major_change();
+        }
+        else 
+        {
+            self.minor_change();
+        }
+        self.set_start_avg();
+    }
+    pub fn major_change(&mut self)
+    {
+        if rand::gen_range(0, 1) == 0 //revert to 0, 2 == 1
             {
                 // add circle
-                self.circles.push(Circle::new_random(Point {x : rand::gen_range(-200.0, 200.0), y : rand::gen_range(-100.0, 100.0)}));
-                for _ in 1..rand::gen_range(1, 2)
+                let mut can_be_connected = (0..self.circles.len()).collect::<Vec<usize>>();
+                self.circles.push(Circle::new_random(Point {x : rand::gen_range(-Settings::X_BOUND, Settings::X_BOUND), y : rand::gen_range(-Settings::Y_BOUND, Settings::Y_BOUND)}));
+                for _ in 0..rand_biased(1, can_be_connected.len() as i32, 1.0)
                 {
-                    self.muscles.push( Muscle::new_random(self.circles.len() - 1, rand::gen_range(0, self.circles.len() - 1)) );
+                    let can_be_connected_index = rand::gen_range(0, can_be_connected.len());
+                    let circles_index = can_be_connected[rand::gen_range(0, can_be_connected_index)];
+                    can_be_connected.remove(can_be_connected_index);
+                    self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index));
                 }
             }
             else
             {
                 //remove circle
-                if self.circles.len() == 0
-                {
-                    return;
-                }
-                let index = rand::gen_range(0, self.circles.len() - 1);
-                for i in 0..self.muscles.len()
-                {
-                    if self.muscles[i].from > index
-                    {
-                        self.muscles[i].from -= 1;
-                    }
-                    if self.muscles[i].to > index
-                    {
-                        self.muscles[i].to -= 1;
-                    }
-                }
-                self.muscles.retain(|x| x.from != index && x.to != index);
-                self.circles.remove(index);
             }
-            self.set_start_avg();
-        }
-        else 
+            
+    }
+    pub fn minor_change(&mut self)
+    {
+        if rand::gen_range(0, 2) == 0
         {
-            //mutate component
-            if rand::gen_range(0, 2) == 1
+            //mutate muscle
+            if self.muscles.len() == 0
             {
-                //mutate muscle
-                if self.muscles.len() == 0
-                {
-                    return;
-                }
-                let index = rand::gen_range(0, self.muscles.len() - 1);
-                self.muscles[index].mutate();
+                return;
             }
-            else
-            {
-                //mutate circle
-                if self.circles.len() == 0
-                {
-                    return;
-                }
-                let index = rand::gen_range(0, self.circles.len() - 1);
-                self.circles[index].mutate();
-            }
+            let index = rand::gen_range(0, self.muscles.len());
+            self.muscles[index].mutate();
         }
+        else
+        {
+            //mutate circle
+            if self.circles.len() == 0
+            {
+                return;
+            }
+            let index = rand::gen_range(0, self.circles.len());
+            self.circles[index].mutate();
+        }
+    }
+    pub fn link_loners(&mut self)
+    {
     }
 
 
@@ -202,3 +199,72 @@ fn factorial(n : usize) -> usize
 {
     (1..=n).product()
 }
+
+fn rand_biased(min : i32, max : i32, p : f32) -> i32
+{
+    // the higher p is the more biased towards min it is https://gamedev.stackexchange.com/questions/116832/random-number-in-a-range-biased-toward-the-low-end-of-the-range/116875#116875
+    (min as f32 + (max - min) as f32 * (rand::gen_range(-1.0, 1.0) as f32).powf(p).abs()).round() as i32
+}
+
+// pub fn mutate(&mut self)
+// {
+//     if  rand::gen_range(1, 5) == 1
+//     {
+//         if rand::gen_range(0, 2) == 1
+//         {
+//             // add circle
+//             self.circles.push(Circle::new_random(Point {x : rand::gen_range(-200.0, 200.0), y : rand::gen_range(-100.0, 100.0)}));
+//             for _ in 1..rand::gen_range(1, 2)
+//             {
+//                 self.muscles.push( Muscle::new_random(self.circles.len() - 1, rand::gen_range(0, self.circles.len() - 1)) );
+//             }
+//         }
+//         else
+//         {
+//             //remove circle
+//             if self.circles.len() == 0
+//             {
+//                 return;
+//             }
+//             let index = rand::gen_range(0, self.circles.len() - 1);
+//             for i in 0..self.muscles.len()
+//             {
+//                 if self.muscles[i].from > index
+//                 {
+//                     self.muscles[i].from -= 1;
+//                 }
+//                 if self.muscles[i].to > index
+//                 {
+//                     self.muscles[i].to -= 1;
+//                 }
+//             }
+//             self.muscles.retain(|x| x.from != index && x.to != index);
+//             self.circles.remove(index);
+//         }
+//         self.set_start_avg();
+//     }
+//     else 
+//     {
+//         //mutate component
+//         if rand::gen_range(0, 2) == 1
+//         {
+//             //mutate muscle
+//             if self.muscles.len() == 0
+//             {
+//                 return;
+//             }
+//             let index = rand::gen_range(0, self.muscles.len() - 1);
+//             self.muscles[index].mutate();
+//         }
+//         else
+//         {
+//             //mutate circle
+//             if self.circles.len() == 0
+//             {
+//                 return;
+//             }
+//             let index = rand::gen_range(0, self.circles.len() - 1);
+//             self.circles[index].mutate();
+//         }
+//     }
+// }
