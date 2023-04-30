@@ -121,12 +121,16 @@ impl Body
             }
             if time > 10.0
             {
-                //TODO make absolute
                 return self.get_average_distance();
             }
             
         }
         
+    }
+    pub fn flip(&mut self)
+    {
+        self.circles.iter_mut().for_each(|c| c.pos.x *= -1.0);
+        self.set_start_avg();
     }
     pub fn mutate(&mut self)
     {

@@ -79,7 +79,7 @@ impl Muscle
         {
             if circles[self.from].on_floor
             {
-                accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip).abs();
+                accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip);
                 accel_from.x *= circles[self.from].slip;
                 if accel_from.y < 0.0
                 {
@@ -88,7 +88,7 @@ impl Muscle
             }
             else
             {
-                accel_from.x -= accel_to.x - (accel_to.x * circles[self.to].slip).abs();
+                accel_from.x -= accel_to.x - (accel_to.x * circles[self.to].slip);
                 accel_to.x *= circles[self.to].slip;
                 if accel_to.y < 0.0
                 {

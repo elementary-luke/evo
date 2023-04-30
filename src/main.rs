@@ -32,18 +32,21 @@ fn window_conf() -> Conf {
 async fn main() {
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
-    create(&mut bodies, 1); //REVERT TO 100/1000
+
+    create(&mut bodies, 100);
+    simulate(&mut bodies);
     for _ in 0..1
     {
+        kill(&mut bodies);
+        repopulate(&mut bodies);
         simulate(&mut bodies);
-        //kill(&mut bodies);
-        //repopulate(&mut bodies);
     }
-    //bodies.push((Body::new_random(200.0, 200.0), 10000.0));
+
+    //bodies.push(Body::new_random(200.0, 200.0));
+    //bodies.push(Body::new());
     //testing(&mut bodies);
     bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0 - 150.0};
     bodies[0].set_start_avg();
-    println!("{}", bodies[0].distance.unwrap());
     
     loop {
         //time += get_frame_time();
@@ -54,10 +57,6 @@ async fn main() {
         
 
         draw_text(&time.to_string(), 20.0, 20.0, 30.0, DARKGRAY);
-        if time == 10.000019
-        {
-            println!("{}", bodies[0].get_average_distance());
-        }
         next_frame().await
     }
 
@@ -81,9 +80,15 @@ fn simulate(bodies : &mut Vec<Body>)
         bodies[i].set_start_avg();
         let temp = bodies[i].clone();
 
-        let dist = Some(bodies[i].simulate());
+        let dist = bodies[i].simulate();
         bodies[i] = temp;
-        bodies[i].distance = dist;
+
+        //if it went backwards flip it
+        if dist < 0.0
+        {
+            bodies[i].flip();
+        }
+        bodies[i].distance = Some(dist.abs());
     }
     bodies.sort_by(|a, b| b.distance.partial_cmp(&a.distance).unwrap());
 }
@@ -119,13 +124,14 @@ fn repopulate(bodies : &mut Vec<Body>)
     for i in 0..bodies.len()
     {
         let mut new_body = bodies[i].clone();
+        new_body.distance = None;
         new_body.mutate();
         new_bodies.push(new_body);
     }
     bodies.append(&mut new_bodies);
 }
 
-
+//walking creature!
 fn testing(bodies : &mut Vec<Body>)
 {
     bodies.push(Body::new());
@@ -165,7 +171,7 @@ fn testing(bodies : &mut Vec<Body>)
         strength : 0.6,
         contracted_len : 80.0,
         extended_len : 160.0,
-        contracted_time : 0.4,
+        contracted_time : 0.8, //revert to 0.8
         extended_time : 0.4,
         contracting : (true, 0.0),
     });
