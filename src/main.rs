@@ -42,16 +42,16 @@ async fn main() {
 
     //bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
 
-    // create(&mut bodies, 100);
-    // simulate(&mut bodies);
-    // for _ in 0..5 // quite stable number of gens
-    // {
-    //     kill(&mut bodies);
-    //     repopulate(&mut bodies);
-    //     simulate(&mut bodies);
-    // }
+    create(&mut bodies, 1000);
+    simulate(&mut bodies);
+    for _ in 0..20 // quite stable number of gens
+    {
+        kill(&mut bodies);
+        repopulate(&mut bodies);
+        simulate(&mut bodies);
+    }
 
-    testing(&mut bodies);
+    //testing(&mut bodies);
     
     //bodies.push(Body::new_random(Settings:X_BOUND, Settings:Y_BOUND));
     //bodies.push(Body::new());
@@ -343,7 +343,7 @@ fn testing(bodies : &mut Vec<Body>)
     body.muscles.push(Muscle {
         from : 0,
         to : 1,
-        strength : 3.0,
+        strength : 0.5,
         contracted_len : 20.0,
         extended_len : 80.0,
         contracted_time : 2.0,
@@ -353,7 +353,7 @@ fn testing(bodies : &mut Vec<Body>)
     body.muscles.push(Muscle {
         from : 1,
         to : 2,
-        strength : 2.5,
+        strength : 0.5,
         contracted_len : 20.0,
         extended_len : 80.0,
         contracted_time : 2.0,

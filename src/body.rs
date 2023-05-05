@@ -30,7 +30,7 @@ impl Body
         let muscles : Vec<Muscle> = Vec::new();
         let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None};
         
-        for _ in 0..rand::gen_range(2, 4) //REVERT TO 2, 10
+        for _ in 0..rand::gen_range(2, 3) //REVERT TO 2, 10
         {
             let x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
             let y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);

@@ -56,6 +56,7 @@ impl Muscle
         }
 
         accel_from = accel_from.normalised() * Point {x : self.strength, y : self.strength};
+        accel_from *= Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
         
         
         if (current_len - target_len).abs() < 0.01
@@ -63,17 +64,17 @@ impl Muscle
             current_len = current_len.round();
         }
         
-        if current_len == target_len
-        {
-            // TODO maybe check before finding accel from so as to not waste power?
-            accel_from = Point {x : 0.0, y : 0.0};
-        }
-        else if current_len < target_len && current_len + accel_from.magnitude() * 2.0 > target_len
-                ||current_len > target_len && current_len + accel_from.magnitude() * 2.0 < target_len
-        {
-            accel_from = accel_from.normalised() * Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
-            println!("c{}, t{}, af{:?}", current_len, target_len, accel_from);
-        }
+        // if current_len == target_len
+        // {
+        //     // TODO maybe check before finding accel from so as to not waste power?
+        //     accel_from = Point {x : 0.0, y : 0.0};
+        // }
+        // else if current_len < target_len && current_len + accel_from.magnitude() * 2.0 > target_len
+        //         ||current_len > target_len && current_len + accel_from.magnitude() * 2.0 < target_len
+        // {
+        //     accel_from = accel_from.normalised() * Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
+        //     println!("c{}, t{}, af{:?}", current_len, target_len, accel_from);
+        // }
 
         let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
 
@@ -139,9 +140,9 @@ impl Muscle
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(0.7, 1.0),
-            extended_time : rand::gen_range(1.0, 1.5),
-            strength : rand::gen_range(0.5, 10.0), 
+            contracted_time : rand::gen_range(1.0, 5.0),
+            extended_time : rand::gen_range(1.0, 5.0),
+            strength : rand::gen_range(0.1, 1.0), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
         }
     }
