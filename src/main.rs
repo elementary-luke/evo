@@ -40,24 +40,25 @@ async fn main() {
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
 
-    bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
-    create(&mut bodies, 100);
-    simulate(&mut bodies);
-    for _ in 0..30
-    {
-        kill(&mut bodies);
-        repopulate(&mut bodies);
-        simulate(&mut bodies);
-    }
+    //bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
 
-    // testing(&mut bodies);
+    // create(&mut bodies, 100);
+    // simulate(&mut bodies);
+    // for _ in 0..5 // quite stable number of gens
+    // {
+    //     kill(&mut bodies);
+    //     repopulate(&mut bodies);
+    //     simulate(&mut bodies);
+    // }
 
+    testing(&mut bodies);
+    
     //bodies.push(Body::new_random(Settings:X_BOUND, Settings:Y_BOUND));
     //bodies.push(Body::new());
     //testing(&mut bodies);
     bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0 - 150.0};
     bodies[0].set_start_avg();
-    println!("{}", bodies[0].distance.unwrap());
+    //println!("{}", bodies[0].distance.unwrap());
     
     loop {
         //time += get_frame_time();
@@ -73,7 +74,7 @@ async fn main() {
             .ui(&mut root_ui());
         if time.floor() == 10.0
         {
-            println!("{}", bodies[0].get_average_distance());
+            //println!("{}", bodies[0].get_average_distance());
         }
 
         draw_text(&time.to_string(), 20.0, 20.0, 30.0, DARKGRAY);
@@ -220,11 +221,97 @@ fn repopulate(bodies : &mut Vec<Body>)
 // }
 
 //square
+// fn testing(bodies : &mut Vec<Body>)
+// {
+//     let mut body = Body::new();
+//     body.circles.push(Circle {
+//         pos : Point {x : -10.0, y : 10.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.9,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.circles.push(Circle {
+//         pos : Point {x : 10.0, y : 10.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.9,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.circles.push(Circle {
+//         pos : Point {x : 10.0, y : -10.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.9,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.circles.push(Circle {
+//         pos : Point {x : -10.0, y : -10.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.9,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.muscles.push(Muscle {
+//         from : 0,
+//         to : 1,
+//         strength : 5.0,
+//         contracted_len : 80.0,
+//         extended_len : 160.0,
+//         contracted_time : 3.0,
+//         extended_time : 0.4,
+//         contracting : (true, 0.0),
+//     });
+//     body.muscles.push(Muscle {
+//         from : 1,
+//         to : 2,
+//         strength : 5.0,
+//         contracted_len : 80.0,
+//         extended_len : 160.0,
+//         contracted_time : 3.0,
+//         extended_time : 0.4,
+//         contracting : (true, 0.0),
+//     });
+//     body.muscles.push(Muscle {
+//         from : 2,
+//         to : 3,
+//         strength : 5.0,
+//         contracted_len : 80.0,
+//         extended_len : 160.0,
+//         contracted_time : 3.0,
+//         extended_time : 0.4,
+//         contracting : (true, 0.0),
+//     });
+//     body.muscles.push(Muscle {
+//         from : 3,
+//         to : 0,
+//         strength : 5.0,
+//         contracted_len : 80.0,
+//         extended_len : 160.0,
+//         contracted_time : 3.0,
+//         extended_time : 0.4,
+//         contracting : (true, 0.0),
+//     });
+//     bodies.push(body);
+// }
+
 fn testing(bodies : &mut Vec<Body>)
 {
     let mut body = Body::new();
     body.circles.push(Circle {
-        pos : Point {x : -10.0, y : 10.0},
+        pos : Point {x : 0.0, y : 0.0},
         r: 5.0, 
         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
         slip: 0.5,
@@ -234,7 +321,7 @@ fn testing(bodies : &mut Vec<Body>)
         on_floor : false,
     });
     body.circles.push(Circle {
-        pos : Point {x : 10.0, y : 10.0},
+        pos : Point {x : 100.0, y : 100.0},
         r: 5.0, 
         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
         slip: 0.5,
@@ -244,17 +331,7 @@ fn testing(bodies : &mut Vec<Body>)
         on_floor : false,
     });
     body.circles.push(Circle {
-        pos : Point {x : 10.0, y : -10.0},
-        r: 5.0, 
-        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-        slip: 0.5,
-        velocity : Point {x : 0.0, y : 0.0},
-        acceleration : Point {x : 0.0, y : 0.0},
-        forces : vec![],
-        on_floor : false,
-    });
-    body.circles.push(Circle {
-        pos : Point {x : -10.0, y : -10.0},
+        pos : Point {x : 100.0, y : -100.0},
         r: 5.0, 
         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
         slip: 0.5,
@@ -266,42 +343,22 @@ fn testing(bodies : &mut Vec<Body>)
     body.muscles.push(Muscle {
         from : 0,
         to : 1,
-        strength : 0.6,
-        contracted_len : 80.0,
-        extended_len : 160.0,
-        contracted_time : 20.0,
-        extended_time : 0.4,
-        contracting : (true, 0.0),
+        strength : 3.0,
+        contracted_len : 20.0,
+        extended_len : 80.0,
+        contracted_time : 2.0,
+        extended_time : 2.0,
+        contracting : (false, 0.0),
     });
     body.muscles.push(Muscle {
         from : 1,
         to : 2,
-        strength : 0.6,
-        contracted_len : 80.0,
-        extended_len : 160.0,
-        contracted_time : 20.0,
-        extended_time : 0.4,
-        contracting : (true, 0.0),
-    });
-    body.muscles.push(Muscle {
-        from : 2,
-        to : 3,
-        strength : 0.6,
-        contracted_len : 80.0,
-        extended_len : 160.0,
-        contracted_time : 20.0,
-        extended_time : 0.4,
-        contracting : (true, 0.0),
-    });
-    body.muscles.push(Muscle {
-        from : 3,
-        to : 0,
-        strength : 0.6,
-        contracted_len : 80.0,
-        extended_len : 160.0,
-        contracted_time : 20.0,
-        extended_time : 0.4,
-        contracting : (true, 0.0),
+        strength : 2.5,
+        contracted_len : 20.0,
+        extended_len : 80.0,
+        contracted_time : 2.0,
+        extended_time : 2.0,
+        contracting : (false, 0.0),
     });
     bodies.push(body);
 }

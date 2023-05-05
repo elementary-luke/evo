@@ -23,6 +23,7 @@ impl Muscle
 {
     pub fn update(&mut self, time : f32, circles : &mut Vec<Circle>)
     {
+        // TODO CHECK IF WORKS WHEN EXTENDING BUT LENGTH IS BIGGER THAN EXTENDED LENGTH
         if self.contracting.0 && time - self.contracting.1 >= self.contracted_time
         {
             self.contracting = (false, time);
@@ -34,29 +35,46 @@ impl Muscle
             return;
         }
         
-        
-
-        let mag : f32;
+        let target_len : f32;
         if self.contracting.0
         {
-            mag = (self.contracted_len - (circles[self.to].pos - circles[self.from].pos).magnitude()) / 2.0;
+            target_len = self.contracted_len;
         }
-        else 
+        else
         {
-            mag = (self.extended_len - (circles[self.to].pos - circles[self.from].pos).magnitude()) / 2.0;
+            target_len = self.extended_len;    
+        }
+
+        let mut current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
+        //println!("{}", current_len);
+
+        let mut accel_from = circles[self.to].pos - circles[self.from].pos;
+
+        if current_len < target_len
+        {
+            accel_from *= Point {x : -1.0,y:  -1.0};
+        }
+
+        accel_from = accel_from.normalised() * Point {x : self.strength, y : self.strength};
+        
+        
+        if (current_len - target_len).abs() < 0.01
+        {
+            current_len = current_len.round();
         }
         
-        let mut accel_from = Point {
-                x : circles[self.from].pos.x - circles[self.to].pos.x,
-                y : circles[self.from].pos.y - circles[self.to].pos.y,
-            };
+        if current_len == target_len
+        {
+            // TODO maybe check before finding accel from so as to not waste power?
+            accel_from = Point {x : 0.0, y : 0.0};
+        }
+        else if current_len < target_len && current_len + accel_from.magnitude() * 2.0 > target_len
+                ||current_len > target_len && current_len + accel_from.magnitude() * 2.0 < target_len
+        {
+            accel_from = accel_from.normalised() * Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
+            println!("c{}, t{}, af{:?}", current_len, target_len, accel_from);
+        }
 
-        accel_from = accel_from * Point { 
-            x: mag / (circles[self.to].pos - circles[self.from].pos).magnitude(), 
-            y: mag / (circles[self.to].pos - circles[self.from].pos).magnitude()
-        };
-
-        accel_from *= Point {x: self.strength, y: self.strength};
         let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
 
 
@@ -108,7 +126,6 @@ impl Muscle
             strength : accel_to,
         });
     }
-
     pub fn draw(&mut self, body_pos : Point, from : Point, to : Point)
     {
         draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, Color {r: 1.0 * self.strength, g: 0.5 * self.strength, b: 0.0, a: self.strength});
@@ -122,9 +139,9 @@ impl Muscle
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(0.4, 1.0),
+            contracted_time : rand::gen_range(0.7, 1.0),
             extended_time : rand::gen_range(1.0, 1.5),
-            strength : rand::gen_range(0.6, 0.8), 
+            strength : rand::gen_range(0.5, 10.0), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
         }
     }

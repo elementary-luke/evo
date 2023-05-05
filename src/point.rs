@@ -18,6 +18,12 @@ impl Point
     {
         (self.x.powf(2.0) + self.y.powf(2.0)).sqrt()
     }
+    pub fn normalised(&self) -> Point
+    {
+        let x = self.x / self.magnitude();
+        let y = self.y / self.magnitude();
+        Point {x, y}
+    }
 }
 
 impl Add for Point
