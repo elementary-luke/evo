@@ -61,6 +61,10 @@ impl Circle
         {
             self.on_floor = false;
         }
+        if self.on_floor
+        {
+            self.velocity.x *= self.slip;
+        }
 
         self.pos += self.velocity;
 

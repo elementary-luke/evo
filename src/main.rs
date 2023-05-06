@@ -12,13 +12,15 @@ use crate::muscle::*;
 use crate::settings::*;
 use macroquad::color::*;
 use macroquad::color_u8;
+use macroquad::prelude::Rect;
+use macroquad::ui::widgets::Button;
+use macroquad::ui::widgets::Label;
 use macroquad::window::*;
 use macroquad::text::*;
 use macroquad::qrand as rand;
 use macroquad::ui::*;
-use macroquad::ui::widgets::Button;
 use macroquad::math::vec2;
-use macroquad::input::*;
+use macroquad::camera::*;
 
 
 fn window_conf() -> Conf {
@@ -39,46 +41,87 @@ async fn main() {
     rand::srand(macroquad::miniquad::date::now() as u64);
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
+    let mut gen : i64 = 1;
+    let mut show : i64 = 0;
 
-    //bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
 
     create(&mut bodies, 1000);
     simulate(&mut bodies);
-    for _ in 0..20 // quite stable number of gens
-    {
-        kill(&mut bodies);
-        repopulate(&mut bodies);
-        simulate(&mut bodies);
-    }
-
-    //testing(&mut bodies);
-    
-    //bodies.push(Body::new_random(Settings:X_BOUND, Settings:Y_BOUND));
-    //bodies.push(Body::new());
-    //testing(&mut bodies);
+    // for _ in 0..1 // quite stable number of gens
+    // {
+    //     kill(&mut bodies);
+    //     repopulate(&mut bodies);
+    //     simulate(&mut bodies);
+        
+    // }
     bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0 - 150.0};
     bodies[0].set_start_avg();
-    //println!("{}", bodies[0].distance.unwrap());
+
+
+    
+
+    let mut rbodies = bodies.clone();
     
     loop {
+        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
         //time += get_frame_time();
         time += 1.0/60.0;
 
         clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
-        bodies[0].update(time);
-        bodies[0].draw();
+        rbodies[0].update(time);
+        rbodies[0].draw();
+        
+        let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
+        let show_text : String;
 
-        let next_gen = Button::new("Next Gen")
-            .position(vec2(40.0, 50.0))
-            .size(vec2(40.0, 50.0))
-            .ui(&mut root_ui());
-        if time.floor() == 10.0
+        match show
         {
-            //println!("{}", bodies[0].get_average_distance());
+            0 => show_text = "Showing Best".to_string(),
+            1 => show_text = "Showing Medium".to_string(),
+            2 => show_text = "Showing Worst".to_string(),
+            3 => show_text = "Showing All".to_string(),
+            _ => show_text = "ERR".to_string(),
         }
 
-        draw_text(&time.to_string(), 20.0, 20.0, 30.0, DARKGRAY);
-        draw_text(&bodies[0].get_average_distance().to_string(), 20.0, 40.0, 30.0, DARKGRAY);
+        let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
+        
+        if show_all_b
+        {
+            show += 1;
+            if show >= 3
+            {
+                show = 0;
+            }
+        }
+
+        if next_gen_b
+        {
+            kill(&mut bodies);
+            repopulate(&mut bodies);
+            simulate(&mut bodies);
+            time = 0.0;
+            gen += 1;
+            rbodies = bodies.clone();
+        }
+        
+        Label::new("Time ".to_string() + &time.to_string())
+            .position(vec2(20.0, 10.0)).ui(&mut root_ui());
+
+        Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
+            .position(vec2(20.0, 30.0)).ui(&mut root_ui());
+        
+        Label::new("Gen ".to_string() + &gen.to_string())
+            .position(vec2(20.0, 50.0)).ui(&mut root_ui());
+
+        Label::new("Best dist ".to_string() + &rbodies[0].distance.unwrap().to_string())
+            .position(vec2(20.0, 70.0)).ui(&mut root_ui());
+
+        Label::new("Avg dist ".to_string() + &(rbodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / rbodies.len() as f32).to_string())
+            .position(vec2(20.0, 90.0)).ui(&mut root_ui());
+
+        cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
+        set_camera(&cam);
+
         next_frame().await
     }
 
@@ -307,58 +350,58 @@ fn repopulate(bodies : &mut Vec<Body>)
 //     bodies.push(body);
 // }
 
-fn testing(bodies : &mut Vec<Body>)
-{
-    let mut body = Body::new();
-    body.circles.push(Circle {
-        pos : Point {x : 0.0, y : 0.0},
-        r: 5.0, 
-        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-        slip: 0.5,
-        velocity : Point {x : 0.0, y : 0.0},
-        acceleration : Point {x : 0.0, y : 0.0},
-        forces : vec![],
-        on_floor : false,
-    });
-    body.circles.push(Circle {
-        pos : Point {x : 100.0, y : 100.0},
-        r: 5.0, 
-        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-        slip: 0.5,
-        velocity : Point {x : 0.0, y : 0.0},
-        acceleration : Point {x : 0.0, y : 0.0},
-        forces : vec![],
-        on_floor : false,
-    });
-    body.circles.push(Circle {
-        pos : Point {x : 100.0, y : -100.0},
-        r: 5.0, 
-        color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
-        slip: 0.5,
-        velocity : Point {x : 0.0, y : 0.0},
-        acceleration : Point {x : 0.0, y : 0.0},
-        forces : vec![],
-        on_floor : false,
-    });
-    body.muscles.push(Muscle {
-        from : 0,
-        to : 1,
-        strength : 0.5,
-        contracted_len : 20.0,
-        extended_len : 80.0,
-        contracted_time : 2.0,
-        extended_time : 2.0,
-        contracting : (false, 0.0),
-    });
-    body.muscles.push(Muscle {
-        from : 1,
-        to : 2,
-        strength : 0.5,
-        contracted_len : 20.0,
-        extended_len : 80.0,
-        contracted_time : 2.0,
-        extended_time : 2.0,
-        contracting : (false, 0.0),
-    });
-    bodies.push(body);
-}
+// fn testing(bodies : &mut Vec<Body>)
+// {
+//     let mut body = Body::new();
+//     body.circles.push(Circle {
+//         pos : Point {x : 0.0, y : 0.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.5,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.circles.push(Circle {
+//         pos : Point {x : 100.0, y : 100.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.5,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.circles.push(Circle {
+//         pos : Point {x : 100.0, y : -100.0},
+//         r: 5.0, 
+//         color: Color { r: 1.0, g: 1.0, b: 1.0, a : 1.0}, 
+//         slip: 0.5,
+//         velocity : Point {x : 0.0, y : 0.0},
+//         acceleration : Point {x : 0.0, y : 0.0},
+//         forces : vec![],
+//         on_floor : false,
+//     });
+//     body.muscles.push(Muscle {
+//         from : 0,
+//         to : 1,
+//         strength : 10.0,
+//         contracted_len : 20.0,
+//         extended_len : 80.0,
+//         contracted_time : 2.0,
+//         extended_time : 2.0,
+//         contracting : (false, 0.0),
+//     });
+//     body.muscles.push(Muscle {
+//         from : 1,
+//         to : 2,
+//         strength : 10.0,
+//         contracted_len : 20.0,
+//         extended_len : 80.0,
+//         contracted_time : 2.0,
+//         extended_time : 2.0,
+//         contracting : (false, 0.0),
+//     });
+//     bodies.push(body);
+// }

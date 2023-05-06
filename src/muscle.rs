@@ -1,3 +1,6 @@
+use std::cmp::max;
+use std::cmp::min;
+
 use crate::circle::*;
 use crate::point::*;
 use crate::force::*;
@@ -45,77 +48,19 @@ impl Muscle
             target_len = self.extended_len;    
         }
 
-        let mut current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
         //println!("{}", current_len);
+        let mut accel_from = Point { x: 0.0, y: 0.0 };
+        let mut accel_to = Point { x: 0.0, y: 0.0 };
 
-        let mut accel_from = circles[self.to].pos - circles[self.from].pos;
-
-        if current_len < target_len
-        {
-            accel_from *= Point {x : -1.0,y:  -1.0};
-        }
-
-        accel_from = accel_from.normalised() * Point {x : self.strength, y : self.strength};
-        accel_from *= Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
-        
-        
-        if (current_len - target_len).abs() < 0.01
-        {
-            current_len = current_len.round();
-        }
-        
-        // if current_len == target_len
-        // {
-        //     // TODO maybe check before finding accel from so as to not waste power?
-        //     accel_from = Point {x : 0.0, y : 0.0};
-        // }
-        // else if current_len < target_len && current_len + accel_from.magnitude() * 2.0 > target_len
-        //         ||current_len > target_len && current_len + accel_from.magnitude() * 2.0 < target_len
-        // {
-        //     accel_from = accel_from.normalised() * Point {x : (target_len - current_len).abs() / 2.0, y : (target_len - current_len).abs() / 2.0};
-        //     println!("c{}, t{}, af{:?}", current_len, target_len, accel_from);
-        // }
-
-        let mut accel_to = accel_from.clone() * Point {x: -1.0, y: -1.0};
-
-
-        if circles[self.from].on_floor && circles[self.to].on_floor
-        {
-            let total_slip = (circles[self.from].slip + circles[self.to].slip);
-            let x_movement = (accel_to.x.abs() + accel_from.x.abs()) * total_slip / 2.0;
-            if total_slip > 0.0
-            {
-                accel_from.x = accel_from.x.signum() * circles[self.from].slip / total_slip * x_movement;
-                accel_to.x = accel_to.x.signum() *  circles[self.to].slip / total_slip * x_movement;
-            }
-            else 
-            {
-                accel_from.x = 0.0;
-                accel_to.x = 0.0;
-            }
-        }
-        else if circles[self.from].on_floor != circles[self.to].on_floor
-        {
-            if circles[self.from].on_floor
-            {
-                //accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip).abs(); makes them move forwards more
-                accel_to.x -= accel_from.x - (accel_from.x * circles[self.from].slip);
-                accel_from.x *= circles[self.from].slip;
-                if accel_from.y < 0.0
-                {
-                    accel_to.y -= accel_from.y;
-                }
-            }
-            else
-            {
-                accel_from.x -= accel_to.x - (accel_to.x * circles[self.to].slip);
-                accel_to.x *= circles[self.to].slip;
-                if accel_to.y < 0.0
-                {
-                    accel_from.y -= accel_to.y;
-                }
-            }
-        }
+        let nfrom = & circles[self.from];
+        let nto = & circles[self.to];
+        let current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
+        let angle = (nfrom.pos.y-nto.pos.y).atan2(nfrom.pos.x-nto.pos.x);
+        let force = f32::min(f32::max(1.0-(current_len / target_len),-0.4),0.4);
+        accel_from.x += (angle).cos() * force * self.strength / nfrom.r;
+        accel_from.y += (angle).sin() * force * self.strength / nfrom.r;
+        accel_to.x -= (angle).cos() * force * self.strength / nto.r;
+        accel_to.y -= (angle).sin() * force * self.strength / nto.r;
 
         circles[self.from].forces.push(Force {
             from : ForceTypes::Muscle,
@@ -140,9 +85,9 @@ impl Muscle
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(1.0, 5.0),
-            extended_time : rand::gen_range(1.0, 5.0),
-            strength : rand::gen_range(0.1, 1.0), 
+            contracted_time : rand::gen_range(0.5, 1.5),
+            extended_time : rand::gen_range(0.5, 1.5),
+            strength : rand::gen_range(80.0, 160.0), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
         }
     }
@@ -157,8 +102,7 @@ impl Muscle
                 2 => self.contracted_time += rand::gen_range(-0.2, 0.2),
                 3 => self.extended_time += rand::gen_range(-0.2, 0.2),
                 4 => {
-                    self.strength += rand::gen_range(-0.2, 0.2);
-                    self.strength = self.strength.clamp(0.0, 1.0);
+                    self.strength += rand::gen_range(-10.0, 10.0);
                 },
                 5 => self.contracting.0 = !self.contracting.0,
                 _ => (),
