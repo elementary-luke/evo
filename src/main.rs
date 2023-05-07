@@ -45,7 +45,7 @@ async fn main() {
     let mut show : i64 = 0;
 
 
-    create(&mut bodies, 1000);
+    create(&mut bodies, 150);
     simulate(&mut bodies);
     // for _ in 0..1 // quite stable number of gens
     // {
@@ -60,18 +60,30 @@ async fn main() {
 
     
 
-    let mut rbodies = bodies.clone();
+    let mut rbodies = vec![bodies[0].clone()];
     
     loop {
         let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
-        //time += get_frame_time();
         time += 1.0/60.0;
 
         clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
-        rbodies[0].update(time);
-        rbodies[0].draw();
+
+        for i in 0..rbodies.len()
+        {
+            rbodies[i].update(time);
+            rbodies[i].draw();
+            if rbodies.len() > 1
+            {
+                rbodies[i].set_alpha(i as f32/(bodies.len() - 1) as f32);
+            }
+            else 
+            {
+                rbodies[0].set_alpha(0.75);
+            }
+        }
         
         let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
+        let next_10_gen_b = Button::new("Next 10 Gen").position(vec2(screen_width() - 100.0, 50.0)).ui(&mut root_ui());
         let show_text : String;
 
         match show
@@ -83,14 +95,61 @@ async fn main() {
             _ => show_text = "ERR".to_string(),
         }
 
-        let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
+        let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 80.0)).ui(&mut root_ui());
         
         if show_all_b
         {
+            time = 0.0;
             show += 1;
-            if show >= 3
+            if show >= 4
             {
                 show = 0;
+            }
+            
+            match show
+            {
+                0 => {
+                    rbodies = vec![bodies[0].clone()]
+                },
+                1 => {
+                    rbodies = vec![bodies[bodies.len() / 2].clone()]
+                },
+                2 => {
+                    rbodies = vec![bodies[bodies.len() - 1].clone()]
+                },
+                3 => {
+                    rbodies = bodies.clone();
+                },
+                _ => println!("ERR RBDOIES SET"),
+            }
+
+        }
+
+        if next_10_gen_b
+        {
+            for _ in 0..10
+            {
+                kill(&mut bodies);
+                repopulate(&mut bodies);
+                simulate(&mut bodies);
+            }
+            time = 0.0;
+            gen += 10;
+            match show
+            {
+                0 => {
+                    rbodies = vec![bodies[0].clone()]
+                },
+                1 => {
+                    rbodies = vec![bodies[bodies.len() / 2].clone()]
+                },
+                2 => {
+                    rbodies = vec![bodies[bodies.len() - 1].clone()]
+                },
+                3 => {
+                    rbodies = bodies.clone();
+                },
+                _ => println!("ERR RBDOIES SET"),
             }
         }
 
@@ -101,7 +160,22 @@ async fn main() {
             simulate(&mut bodies);
             time = 0.0;
             gen += 1;
-            rbodies = bodies.clone();
+            match show
+            {
+                0 => {
+                    rbodies = vec![bodies[0].clone()]
+                },
+                1 => {
+                    rbodies = vec![bodies[bodies.len() / 2].clone()]
+                },
+                2 => {
+                    rbodies = vec![bodies[bodies.len() - 1].clone()]
+                },
+                3 => {
+                    rbodies = bodies.clone();
+                },
+                _ => println!("ERR RBDOIES SET"),
+            }
         }
         
         Label::new("Time ".to_string() + &time.to_string())
@@ -113,10 +187,10 @@ async fn main() {
         Label::new("Gen ".to_string() + &gen.to_string())
             .position(vec2(20.0, 50.0)).ui(&mut root_ui());
 
-        Label::new("Best dist ".to_string() + &rbodies[0].distance.unwrap().to_string())
+        Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
             .position(vec2(20.0, 70.0)).ui(&mut root_ui());
 
-        Label::new("Avg dist ".to_string() + &(rbodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / rbodies.len() as f32).to_string())
+        Label::new("Avg dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
             .position(vec2(20.0, 90.0)).ui(&mut root_ui());
 
         cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();

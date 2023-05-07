@@ -202,7 +202,11 @@ impl Body
     {
     }
 
-
+    pub fn set_alpha(&mut self, alpha : f32)
+    {
+        self.circles.iter_mut().for_each(|c| c.color.a = alpha);
+        self.muscles.iter_mut().for_each(|m| m.color.a = alpha);
+    }
 }
 
 fn factorial(n : usize) -> usize

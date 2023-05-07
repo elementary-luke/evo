@@ -80,7 +80,7 @@ impl Circle
         Circle {
             pos,
             r: 5.0, 
-            color: Color { r: slip, g: slip, b: slip, a : 1.0}, 
+            color: Color { r: 0.9 * slip, g:slip, b: slip, a : 1.0}, 
             slip,
             velocity : Point {x : 0.0, y : 0.0},
             acceleration : Point {x : 0.0, y : 0.0},

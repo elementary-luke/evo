@@ -4,6 +4,7 @@ use std::cmp::min;
 use crate::circle::*;
 use crate::point::*;
 use crate::force::*;
+use crate::settings::Settings;
 use macroquad::qrand as rand;
 use macroquad::color::*;
 use macroquad::prelude::draw_line;
@@ -19,6 +20,7 @@ pub struct Muscle
     pub extended_time : f32,
     pub strength : f32,
     pub contracting : (bool, f32), // bool is if it is contracting, f32 is the time it started contracting
+    pub color : Color,
 }
 
 
@@ -74,22 +76,30 @@ impl Muscle
     }
     pub fn draw(&mut self, body_pos : Point, from : Point, to : Point)
     {
-        draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, Color {r: 1.0 * self.strength, g: 0.5 * self.strength, b: 0.0, a: self.strength});
+        draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, self.color);
     }
     pub fn new_random(from : usize, to : usize, ) -> Muscle
     {   
         let contracted_len = rand::gen_range(50.0, 100.0);
         let extended_len = rand::gen_range(contracted_len, contracted_len + 100.0);
-        Muscle {
+        let mut m = Muscle {
             from, 
             to, 
             contracted_len, 
             extended_len, 
             contracted_time : rand::gen_range(0.5, 1.5),
             extended_time : rand::gen_range(0.5, 1.5),
-            strength : rand::gen_range(80.0, 160.0), 
+            strength : rand::gen_range(Settings::STRENGTH_MIN, Settings::STRENGTH_MAX), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
-        }
+            color : Color {r: 0.0, g: 0.0, b: 0.0, a: 1.0},
+        };
+        m.color = Color {r: 1.0 * (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
+            g: 0.5 *  (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
+            b: 0.0  * (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
+            a: 1.0
+        };
+
+        return m;
     }
     pub fn mutate(&mut self)
     {
