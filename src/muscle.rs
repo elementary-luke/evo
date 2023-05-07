@@ -80,8 +80,8 @@ impl Muscle
     }
     pub fn new_random(from : usize, to : usize, ) -> Muscle
     {   
-        let contracted_len = rand::gen_range(50.0, 100.0);
-        let extended_len = rand::gen_range(contracted_len, contracted_len + 100.0);
+        let contracted_len = rand::gen_range(Settings::CONTRACTED_LEN_MIN, Settings::CONTRACTED_LEN_MAX);
+        let extended_len = rand::gen_range(Settings::EXTENDED_LEN_MIN, Settings::EXTENDED_LEN_MAX);
         let mut m = Muscle {
             from, 
             to, 
@@ -107,8 +107,8 @@ impl Muscle
         {
             match rand::gen_range(0, 5)
             {
-                0 => self.contracted_len += rand::gen_range(-20.0, 20.0),
-                1 => self.extended_len += rand::gen_range(-20.0, 20.0),
+                0 => self.contracted_len += rand::gen_range(-5.0, 5.0),
+                1 => self.extended_len += rand::gen_range(-5.0, 5.0),
                 2 => self.contracted_time += rand::gen_range(-0.2, 0.2),
                 3 => self.extended_time += rand::gen_range(-0.2, 0.2),
                 4 => {

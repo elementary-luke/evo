@@ -45,7 +45,7 @@ async fn main() {
     let mut show : i64 = 0;
 
 
-    create(&mut bodies, 150);
+    create(&mut bodies, 300);
     simulate(&mut bodies);
     // for _ in 0..1 // quite stable number of gens
     // {
@@ -54,7 +54,7 @@ async fn main() {
     //     simulate(&mut bodies);
         
     // }
-    bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0 - 150.0};
+    bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
     bodies[0].set_start_avg();
 
 
@@ -74,7 +74,7 @@ async fn main() {
             rbodies[i].draw();
             if rbodies.len() > 1
             {
-                rbodies[i].set_alpha(i as f32/(bodies.len() - 1) as f32);
+                rbodies[i].set_alpha((bodies.len()-1-i) as f32/(bodies.len() - 1) as f32);
             }
             else 
             {
@@ -215,7 +215,7 @@ fn simulate(bodies : &mut Vec<Body>)
         {
             continue;
         }
-        bodies[i].pos = Point {x : screen_width()/2.0 - 100.0, y : screen_height()/2.0 - 150.0};
+        bodies[i].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND};
         bodies[i].set_start_avg();
         let temp = bodies[i].clone();
 

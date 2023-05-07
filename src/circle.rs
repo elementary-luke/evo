@@ -29,17 +29,14 @@ impl Circle
         {
             match self.forces[i].from
             {
-                ForceTypes::Gravity => 
-                {
-                    self.acceleration.y += Settings::GRAV;
-                },
-                ForceTypes::Muscle => 
+                ForceTypes::Gravity | ForceTypes::Muscle=> 
                 {
                     impulse += self.forces[i].strength;
-                },
+                }
             }
         }
-        self.velocity = impulse;
+        self.velocity *= Point {x : Settings::DRAG, y : Settings::DRAG};
+        self.velocity += impulse;
         self.forces.clear();
         self.forces.push(Force {
             from : ForceTypes::Gravity,
@@ -47,7 +44,6 @@ impl Circle
         });
 
         //self.velocity += self.acceleration;
-        self.velocity += Point {x:0.0, y: Settings::GRAV};
         
         if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= Settings::FLOOR_Y
         {
