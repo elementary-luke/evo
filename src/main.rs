@@ -63,7 +63,8 @@ async fn main() {
     let mut rbodies = vec![bodies[0].clone()];
     
     loop {
-        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
+        let zoom = 150.0;
+        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
         time += 1.0/60.0;
 
         clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
@@ -81,119 +82,122 @@ async fn main() {
                 rbodies[0].set_alpha(0.75);
             }
         }
-        
-        let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
-        let next_10_gen_b = Button::new("Next 10 Gen").position(vec2(screen_width() - 100.0, 50.0)).ui(&mut root_ui());
-        let show_text : String;
-
-        match show
+        //ui stuff
         {
-            0 => show_text = "Showing Best".to_string(),
-            1 => show_text = "Showing Medium".to_string(),
-            2 => show_text = "Showing Worst".to_string(),
-            3 => show_text = "Showing All".to_string(),
-            _ => show_text = "ERR".to_string(),
-        }
+            let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
+            let next_10_gen_b = Button::new("Next 10 Gen").position(vec2(screen_width() - 100.0, 50.0)).ui(&mut root_ui());
+            let show_text : String;
 
-        let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 80.0)).ui(&mut root_ui());
-        
-        if show_all_b
-        {
-            time = 0.0;
-            show += 1;
-            if show >= 4
-            {
-                show = 0;
-            }
-            
             match show
             {
-                0 => {
-                    rbodies = vec![bodies[0].clone()]
-                },
-                1 => {
-                    rbodies = vec![bodies[bodies.len() / 2].clone()]
-                },
-                2 => {
-                    rbodies = vec![bodies[bodies.len() - 1].clone()]
-                },
-                3 => {
-                    rbodies = bodies.clone();
-                },
-                _ => println!("ERR RBDOIES SET"),
+                0 => show_text = "Showing Best".to_string(),
+                1 => show_text = "Showing Median".to_string(),
+                2 => show_text = "Showing Worst".to_string(),
+                3 => show_text = "Showing All".to_string(),
+                _ => show_text = "ERR".to_string(),
             }
 
-        }
+            let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 80.0)).ui(&mut root_ui());
+            
+            if show_all_b
+            {
+                time = 0.0;
+                show += 1;
+                if show >= 4
+                {
+                    show = 0;
+                }
+                
+                match show
+                {
+                    0 => {
+                        rbodies = vec![bodies[0].clone()]
+                    },
+                    1 => {
+                        rbodies = vec![bodies[bodies.len() / 2].clone()]
+                    },
+                    2 => {
+                        rbodies = vec![bodies[bodies.len() - 1].clone()]
+                    },
+                    3 => {
+                        rbodies = bodies.clone();
+                    },
+                    _ => println!("ERR RBDOIES SET"),
+                }
 
-        if next_10_gen_b
-        {
-            for _ in 0..10
+            }
+
+            if next_10_gen_b
+            {
+                for _ in 0..10
+                {
+                    kill(&mut bodies);
+                    repopulate(&mut bodies);
+                    simulate(&mut bodies);
+                }
+                time = 0.0;
+                gen += 10;
+                match show
+                {
+                    0 => {
+                        rbodies = vec![bodies[0].clone()]
+                    },
+                    1 => {
+                        rbodies = vec![bodies[bodies.len() / 2].clone()]
+                    },
+                    2 => {
+                        rbodies = vec![bodies[bodies.len() - 1].clone()]
+                    },
+                    3 => {
+                        rbodies = bodies.clone();
+                    },
+                    _ => println!("ERR RBDOIES SET"),
+                }
+            }
+
+            if next_gen_b
             {
                 kill(&mut bodies);
                 repopulate(&mut bodies);
                 simulate(&mut bodies);
+                time = 0.0;
+                gen += 1;
+                match show
+                {
+                    0 => {
+                        rbodies = vec![bodies[0].clone()]
+                    },
+                    1 => {
+                        rbodies = vec![bodies[bodies.len() / 2].clone()]
+                    },
+                    2 => {
+                        rbodies = vec![bodies[bodies.len() - 1].clone()]
+                    },
+                    3 => {
+                        rbodies = bodies.clone();
+                    },
+                    _ => println!("ERR RBDOIES SET"),
+                }
             }
-            time = 0.0;
-            gen += 10;
-            match show
-            {
-                0 => {
-                    rbodies = vec![bodies[0].clone()]
-                },
-                1 => {
-                    rbodies = vec![bodies[bodies.len() / 2].clone()]
-                },
-                2 => {
-                    rbodies = vec![bodies[bodies.len() - 1].clone()]
-                },
-                3 => {
-                    rbodies = bodies.clone();
-                },
-                _ => println!("ERR RBDOIES SET"),
-            }
-        }
+            
+            Label::new("Time ".to_string() + &time.to_string())
+                .position(vec2(20.0, 10.0)).ui(&mut root_ui());
 
-        if next_gen_b
-        {
-            kill(&mut bodies);
-            repopulate(&mut bodies);
-            simulate(&mut bodies);
-            time = 0.0;
-            gen += 1;
-            match show
-            {
-                0 => {
-                    rbodies = vec![bodies[0].clone()]
-                },
-                1 => {
-                    rbodies = vec![bodies[bodies.len() / 2].clone()]
-                },
-                2 => {
-                    rbodies = vec![bodies[bodies.len() - 1].clone()]
-                },
-                3 => {
-                    rbodies = bodies.clone();
-                },
-                _ => println!("ERR RBDOIES SET"),
-            }
+            Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
+                .position(vec2(20.0, 30.0)).ui(&mut root_ui());
+            
+            Label::new("Gen ".to_string() + &gen.to_string())
+                .position(vec2(20.0, 50.0)).ui(&mut root_ui());
+
+            Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
+                .position(vec2(20.0, 70.0)).ui(&mut root_ui());
+
+            Label::new("Avg dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
+                .position(vec2(20.0, 90.0)).ui(&mut root_ui());
         }
         
-        Label::new("Time ".to_string() + &time.to_string())
-            .position(vec2(20.0, 10.0)).ui(&mut root_ui());
-
-        Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
-            .position(vec2(20.0, 30.0)).ui(&mut root_ui());
-        
-        Label::new("Gen ".to_string() + &gen.to_string())
-            .position(vec2(20.0, 50.0)).ui(&mut root_ui());
-
-        Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
-            .position(vec2(20.0, 70.0)).ui(&mut root_ui());
-
-        Label::new("Avg dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
-            .position(vec2(20.0, 90.0)).ui(&mut root_ui());
-
         cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
+        cam.target.y = Settings::FLOOR_Y - 100.0;
         set_camera(&cam);
 
         next_frame().await
@@ -215,7 +219,7 @@ fn simulate(bodies : &mut Vec<Body>)
         {
             continue;
         }
-        bodies[i].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND};
+        bodies[i].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
         bodies[i].set_start_avg();
         let temp = bodies[i].clone();
 

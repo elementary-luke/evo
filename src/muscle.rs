@@ -58,7 +58,7 @@ impl Muscle
         let nto = & circles[self.to];
         let current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
         let angle = (nfrom.pos.y-nto.pos.y).atan2(nfrom.pos.x-nto.pos.x);
-        let force = f32::min(f32::max(1.0-(current_len / target_len),-0.4),0.4);
+        let force = f32::min(f32::max(1.0-(current_len / target_len),-0.2), 0.2);
         accel_from.x += (angle).cos() * force * self.strength / nfrom.r;
         accel_from.y += (angle).sin() * force * self.strength / nfrom.r;
         accel_to.x -= (angle).cos() * force * self.strength / nto.r;
@@ -87,8 +87,8 @@ impl Muscle
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(0.5, 1.5),
-            extended_time : rand::gen_range(0.5, 1.5),
+            contracted_time : rand::gen_range(Settings::CONTRACTED_TIME_MIN, Settings::CONTRACTED_TIME_MAX),
+            extended_time : rand::gen_range(Settings::EXTENDED_TIME_MIN, Settings::EXTENDED_TIME_MAX),
             strength : rand::gen_range(Settings::STRENGTH_MIN, Settings::STRENGTH_MAX), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
             color : Color {r: 0.0, g: 0.0, b: 0.0, a: 1.0},
@@ -111,9 +111,7 @@ impl Muscle
                 1 => self.extended_len += rand::gen_range(-5.0, 5.0),
                 2 => self.contracted_time += rand::gen_range(-0.2, 0.2),
                 3 => self.extended_time += rand::gen_range(-0.2, 0.2),
-                4 => {
-                    self.strength += rand::gen_range(-10.0, 10.0);
-                },
+                4 => self.strength += rand::gen_range(-10.0, 10.0),
                 5 => self.contracting.0 = !self.contracting.0,
                 _ => (),
             }

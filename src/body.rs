@@ -71,22 +71,18 @@ impl Body
             return body;
         }
         
-        for _ in 0..(rand_biased(0, (max_connections - body.muscles.len()) as i32, 20.0) as usize)
+        for _ in 0..(rand_biased(0, (max_connections - body.muscles.len()) as i32, 2.0) as usize)
         {
             //might be too rng and take too long so might have to change VV
-            loop
+            let from = rand::gen_range(0, body.circles.len());
+            let to = rand::gen_range(0, body.circles.len());
+
+            if from == to || body.muscles.iter().any(|m| (m.from == from && m.to == to) || (m.from == to && m.to == from))
             {
-                let from = rand::gen_range(0, body.circles.len());
-                let to = rand::gen_range(0, body.circles.len());
-
-                if from == to || body.muscles.iter().any(|m| (m.from == from && m.to == to) || (m.from == to && m.to == from))
-                {
-                    continue;
-                }
-
-                body.muscles.push(Muscle::new_random(from, to));
-                break;
+                continue;
             }
+
+            body.muscles.push(Muscle::new_random(from, to));
         }
         body
     }
@@ -139,7 +135,7 @@ impl Body
     }
     pub fn mutate(&mut self)
     {
-        if  rand::gen_range(2, 6) == 1
+        if  rand::gen_range(0, 3) == 0
         {
             self.major_change();
         }
@@ -151,24 +147,68 @@ impl Body
     }
     pub fn major_change(&mut self)
     {
-        if rand::gen_range(0, 1) == 0 //revert to 0, 2 == 1
-            {
-                // add circle
-                let mut can_be_connected = (0..self.circles.len()).collect::<Vec<usize>>();
-                self.circles.push(Circle::new_random(Point {x : rand::gen_range(-Settings::X_BOUND, Settings::X_BOUND), y : rand::gen_range(-Settings::Y_BOUND, Settings::Y_BOUND)}));
-                for _ in 0..rand_biased(1, can_be_connected.len() as i32, 1.0)
-                {
-                    let can_be_connected_index = rand::gen_range(0, can_be_connected.len());
-                    let circles_index = can_be_connected[rand::gen_range(0, can_be_connected_index)];
-                    can_be_connected.remove(can_be_connected_index);
-                    self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index));
-                }
-            }
-            else
-            {
-                //remove circle
-            }
+        match rand::gen_range(0, 4)
+        {
+            0 => self.add_circle(),
+            1 => self.remove_circle(),
+            2 => self.add_muscle(),
+            3 => self.remove_muscle(),
+            _ => println!("ERROR: major_change() in body.rs")
+        }
             
+    }
+    pub fn add_circle(&mut self)
+    {
+        let mut can_be_connected = (0..self.circles.len()).collect::<Vec<usize>>();
+        self.circles.push(Circle::new_random(Point {x : rand::gen_range(-Settings::X_BOUND, Settings::X_BOUND), y : rand::gen_range(-Settings::Y_BOUND, Settings::Y_BOUND)}));
+        for _ in 0..rand_biased(1, can_be_connected.len() as i32, 2.0)
+        {
+            let can_be_connected_index = rand::gen_range(0, can_be_connected.len());
+            let circles_index = can_be_connected[rand::gen_range(0, can_be_connected_index)];
+            can_be_connected.remove(can_be_connected_index);
+            self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index));
+        }
+    }
+    pub fn remove_circle(&mut self)
+    {
+        if self.circles.len() == 0
+        {
+            return;
+        }
+        let index = rand::gen_range(0, self.circles.len() - 1);
+        for i in 0..self.muscles.len()
+        {
+            if self.muscles[i].from > index
+            {
+                self.muscles[i].from -= 1;
+            }
+            if self.muscles[i].to > index
+            {
+                self.muscles[i].to -= 1;
+            }
+        }
+        self.muscles.retain(|x| x.from != index && x.to != index);
+        self.circles.remove(index);
+    }
+    pub fn add_muscle(&mut self)
+    {
+        if self.circles.len() < 2
+        {
+            return;
+        }
+        let from = rand::gen_range(0, self.circles.len());
+        let to = rand::gen_range(0, self.circles.len());
+
+        if from == to || self.muscles.iter().any(|m| (m.from == from && m.to == to) || (m.from == to && m.to == from))
+        {
+            return;
+        }
+
+        self.muscles.push(Muscle::new_random(from, to));
+    }
+    pub fn remove_muscle(&mut self)
+    {
+        self.muscles.remove(rand::gen_range(0, self.muscles.len()));
     }
     pub fn minor_change(&mut self)
     {
@@ -231,24 +271,24 @@ fn rand_biased(min : i32, max : i32, p : f32) -> i32
 //         else
 //         {
 //             //remove circle
-//             if self.circles.len() == 0
-//             {
-//                 return;
-//             }
-//             let index = rand::gen_range(0, self.circles.len() - 1);
-//             for i in 0..self.muscles.len()
-//             {
-//                 if self.muscles[i].from > index
-//                 {
-//                     self.muscles[i].from -= 1;
-//                 }
-//                 if self.muscles[i].to > index
-//                 {
-//                     self.muscles[i].to -= 1;
-//                 }
-//             }
-//             self.muscles.retain(|x| x.from != index && x.to != index);
-//             self.circles.remove(index);
+            // if self.circles.len() == 0
+            // {
+            //     return;
+            // }
+            // let index = rand::gen_range(0, self.circles.len() - 1);
+            // for i in 0..self.muscles.len()
+            // {
+            //     if self.muscles[i].from > index
+            //     {
+            //         self.muscles[i].from -= 1;
+            //     }
+            //     if self.muscles[i].to > index
+            //     {
+            //         self.muscles[i].to -= 1;
+            //     }
+            // }
+            // self.muscles.retain(|x| x.from != index && x.to != index);
+            // self.circles.remove(index);
 //         }
 //         self.set_start_avg();
 //     }
