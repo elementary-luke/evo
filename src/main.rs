@@ -21,6 +21,7 @@ use macroquad::qrand as rand;
 use macroquad::ui::*;
 use macroquad::math::vec2;
 use macroquad::camera::*;
+use macroquad::shapes::*;
 
 
 fn window_conf() -> Conf {
@@ -38,14 +39,23 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf())]
 async fn main() {
-    rand::srand(macroquad::miniquad::date::now() as u64);
+    let seed : u64;
+    if Settings::RANDOM_SEED
+    {
+        seed = macroquad::miniquad::date::now() as u64;
+    }
+    else
+    {
+        seed = Settings::SEED;
+    }
+
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
     let mut gen : i64 = 1;
     let mut show : i64 = 0;
 
 
-    create(&mut bodies, 300);
+    create(&mut bodies, Settings::POPULATION_SIZE);
     simulate(&mut bodies);
     // for _ in 0..1 // quite stable number of gens
     // {
@@ -54,7 +64,7 @@ async fn main() {
     //     simulate(&mut bodies);
         
     // }
-    bodies[0].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+    bodies[0].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
     bodies[0].set_start_avg();
 
 
@@ -63,26 +73,52 @@ async fn main() {
     let mut rbodies = vec![bodies[0].clone()];
     
     loop {
-        let zoom = 150.0;
-        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
-        time += 1.0/60.0;
-
         clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
 
-        for i in 0..rbodies.len()
+        //running
         {
-            rbodies[i].update(time);
-            rbodies[i].draw();
-            if rbodies.len() > 1
+            for i in 0..(((bodies[0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
             {
-                rbodies[i].set_alpha((bodies.len()-1-i) as f32/(bodies.len() - 1) as f32);
+                let y = Settings::FLOOR_Y - 250.0;
+                let w = 80.0;
+                let h = 40.0;
+                let x = screen_width()/2.0 + i as f32 * 200.0 + bodies[0].start_avg_x - w / 2.0;
+                draw_rectangle(x, 
+                    y, 
+                    w, 
+                    h, 
+                    WHITE
+                );
+                draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
+                draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
+                draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
             }
-            else 
+            //draw ground
+            draw_rectangle(-screen_width(), 
+                Settings::FLOOR_Y, 
+                screen_width() * 2.0 + bodies[0].distance.unwrap(), 
+                screen_height() - Settings::FLOOR_Y, 
+                color_u8!(192.0, 255.0, 133.0, 255.0)
+            );
+
+            time += 1.0/60.0;
+            for i in 0..rbodies.len()
             {
-                rbodies[0].set_alpha(0.75);
+                rbodies[i].update(time);
+                rbodies[i].draw();
+                if rbodies.len() > 1
+                {
+                    rbodies[i].set_alpha((bodies.len()-1-i) as f32/(bodies.len() - 1) as f32);
+                }
+                else 
+                {
+                    rbodies[0].set_alpha(0.75);
+                }
             }
+            
         }
-        //ui stuff
+
+        //ui
         {
             let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
             let next_10_gen_b = Button::new("Next 10 Gen").position(vec2(screen_width() - 100.0, 50.0)).ui(&mut root_ui());
@@ -179,26 +215,34 @@ async fn main() {
                     _ => println!("ERR RBDOIES SET"),
                 }
             }
-            
-            Label::new("Time ".to_string() + &time.to_string())
+            Label::new("Seed ".to_string() + &seed.to_string())
                 .position(vec2(20.0, 10.0)).ui(&mut root_ui());
 
-            Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
-                .position(vec2(20.0, 30.0)).ui(&mut root_ui());
-            
             Label::new("Gen ".to_string() + &gen.to_string())
+                .position(vec2(20.0, 30.0)).ui(&mut root_ui());
+
+            Label::new("Time ".to_string() + &time.to_string())
                 .position(vec2(20.0, 50.0)).ui(&mut root_ui());
 
-            Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
+            Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
                 .position(vec2(20.0, 70.0)).ui(&mut root_ui());
 
-            Label::new("Avg dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
+            Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
                 .position(vec2(20.0, 90.0)).ui(&mut root_ui());
+
+            Label::new("Mean dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
+                .position(vec2(20.0, 110.0)).ui(&mut root_ui());
         }
         
-        cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
-        cam.target.y = Settings::FLOOR_Y - 100.0;
-        set_camera(&cam);
+        //camera
+        {
+            //TODO FIX ZOOM SO WORKS WHEN SCALE SCREEN!
+            let zoom = 0.0;
+            let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
+            cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
+            cam.target.y = Settings::FLOOR_Y - 100.0;
+            set_camera(&cam);
+        }
 
         next_frame().await
     }
@@ -219,7 +263,7 @@ fn simulate(bodies : &mut Vec<Body>)
         {
             continue;
         }
-        bodies[i].pos = Point {x : screen_width()/2.0 - 100.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+        bodies[i].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
         bodies[i].set_start_avg();
         let temp = bodies[i].clone();
 
@@ -229,7 +273,7 @@ fn simulate(bodies : &mut Vec<Body>)
         //if it went backwards flip it
         if dist < 0.0
         {
-            bodies[i].flip();
+            //bodies[i].flip(); // TODO FIX THIS AS IF BEST IS FLIPPED DOESNT DO THE SAME THING
         }
         bodies[i].distance = Some(dist.abs());
     }

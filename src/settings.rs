@@ -2,6 +2,11 @@ pub struct Settings {}
 
 impl Settings {
     //creation of creatures
+    pub const RANDOM_SEED : bool = true;
+    pub const SEED : u64 = 0;
+
+    pub const POPULATION_SIZE : usize = 300;
+
     pub const X_BOUND : f32 = 200.0;
     pub const Y_BOUND : f32 = 200.0;
 

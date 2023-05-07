@@ -92,11 +92,11 @@ impl Circle
             {
                 0 => {
                     self.pos.x += rand::gen_range(-50.0, 50.0);
-                    self.pos.x = self.pos.x.clamp(-Settings::X_BOUND, Settings::X_BOUND);
+                    self.pos.x = self.pos.x.clamp(-Settings::X_BOUND / 2.0, Settings::X_BOUND / 2.0);
                 },
                 1 => {
                     self.pos.y += rand::gen_range(-50.0, 50.0);
-                    self.pos.y = self.pos.y.clamp(-Settings::Y_BOUND, Settings::Y_BOUND);
+                    self.pos.y = self.pos.y.clamp(-Settings::Y_BOUND / 2.0, Settings::Y_BOUND / 2.0);
                 },
                 2 => {
                     self.slip += rand::gen_range(-0.2, 0.2);
