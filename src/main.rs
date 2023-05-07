@@ -59,7 +59,7 @@ async fn main() {
     let mut bodies : Vec<Body> = Vec::new();
     let mut gen : u32 = 1;
     let mut add_gens_text : String = "1".to_string();
-    let mut show : i64 = 0;
+    let mut show : ShowTypes = ShowTypes::Best;
 
 
     create(&mut bodies, Settings::POPULATION_SIZE);
@@ -73,9 +73,6 @@ async fn main() {
     // }
     bodies[0].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
     bodies[0].set_start_avg();
-
-
-    
 
     let mut rbodies = vec![bodies[0].clone()];
     
@@ -124,50 +121,6 @@ async fn main() {
             }
             
         }
-
-        //ui
-        {
-            let show_text : String;
-
-            match show
-            {
-                0 => show_text = "Showing Best".to_string(),
-                1 => show_text = "Showing Median".to_string(),
-                2 => show_text = "Showing Worst".to_string(),
-                3 => show_text = "Showing All".to_string(),
-                _ => show_text = "ERR".to_string(),
-            }
-
-            let show_all_b = Button::new(show_text).position(vec2(screen_width() - 100.0, 80.0)).ui(&mut root_ui());
-            
-            if show_all_b
-            {
-                time = 0.0;
-                show += 1;
-                if show >= 4
-                {
-                    show = 0;
-                }
-                
-                match show
-                {
-                    0 => {
-                        rbodies = vec![bodies[0].clone()]
-                    },
-                    1 => {
-                        rbodies = vec![bodies[bodies.len() / 2].clone()]
-                    },
-                    2 => {
-                        rbodies = vec![bodies[bodies.len() - 1].clone()]
-                    },
-                    3 => {
-                        rbodies = bodies.clone();
-                    },
-                    _ => println!("ERR RBDOIES SET"),
-                }
-
-            }
-        }
         //egui
         {
             egui_macroquad::ui(|egui_ctx| {
@@ -203,16 +156,16 @@ async fn main() {
                                             gen += add_gens_text.parse::<u32>().unwrap();
                                             match show
                                             {
-                                                0 => {
+                                                ShowTypes::Best => {
                                                     rbodies = vec![bodies[0].clone()]
                                                 },
-                                                1 => {
+                                                ShowTypes::Median => {
                                                     rbodies = vec![bodies[bodies.len() / 2].clone()]
                                                 },
-                                                2 => {
+                                                ShowTypes::Worst => {
                                                     rbodies = vec![bodies[bodies.len() - 1].clone()]
                                                 },
-                                                3 => {
+                                                ShowTypes::All => {
                                                     rbodies = bodies.clone();
                                                 },
                                                 _ => println!("ERR RBDOIES SET"),
@@ -230,7 +183,39 @@ async fn main() {
                                     .desired_rows(1)
                                 );
                                 ui.label("Gens ".to_string());
+
                             });
+                            let show_before = show.clone();
+                            egui::ComboBox::from_label("Take your pick")
+                                .selected_text(format!("{:?}", show))
+                                .show_ui(ui, |ui| {
+                                    ui.style_mut().wrap = Some(false);
+                                    ui.set_min_width(60.0);
+                                    ui.selectable_value(& mut show, ShowTypes::Best, "Best");
+                                    ui.selectable_value(& mut show, ShowTypes::Median, "Median");
+                                    ui.selectable_value(& mut show, ShowTypes::Worst, "Worst");
+                                    ui.selectable_value(& mut show, ShowTypes::All, "All");
+                                });
+                            if show != show_before
+                            {
+                                time = 0.0;
+                                match show
+                                {
+                                    ShowTypes::Best => {
+                                        rbodies = vec![bodies[0].clone()]
+                                    },
+                                    ShowTypes::Median => {
+                                        rbodies = vec![bodies[bodies.len() / 2].clone()]
+                                    },
+                                    ShowTypes::Worst => {
+                                        rbodies = vec![bodies[bodies.len() - 1].clone()]
+                                    },
+                                    ShowTypes::All => {
+                                        rbodies = bodies.clone();
+                                    },
+                                    _ => println!("ERR RBDOIES SET"),
+                                }
+                            }
                         });
                         
                     });
@@ -253,7 +238,7 @@ async fn main() {
             let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
             cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
             cam.target.y = Settings::FLOOR_Y - 100.0;
-            //set_camera(&cam);
+            set_camera(&cam);
         }
 
         next_frame().await
@@ -329,6 +314,15 @@ fn repopulate(bodies : &mut Vec<Body>)
         new_bodies.push(new_body);
     }
     bodies.append(&mut new_bodies);
+}
+
+#[derive(Debug, Clone, PartialEq)]
+enum ShowTypes
+{
+    Best,
+    Median,
+    Worst,
+    All,
 }
 
 //triangler
