@@ -5,11 +5,16 @@ mod point;
 mod force;
 mod body;
 mod settings;
+use std::sync::Arc;
+
 use crate::body::*;
 use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
 use crate::settings::*;
+use egui_macroquad::egui::Color32;
+use egui_macroquad::egui::epaint::Shadow;
+use egui_macroquad::egui::plot::Text;
 use macroquad::color::*;
 use macroquad::color_u8;
 use macroquad::prelude::Rect;
@@ -22,6 +27,7 @@ use macroquad::ui::*;
 use macroquad::math::vec2;
 use macroquad::camera::*;
 use macroquad::shapes::*;
+use egui_macroquad::*;
 
 
 fn window_conf() -> Conf {
@@ -51,7 +57,8 @@ async fn main() {
 
     let mut time : f32 = 0.0;
     let mut bodies : Vec<Body> = Vec::new();
-    let mut gen : i64 = 1;
+    let mut gen : u32 = 1;
+    let mut add_gens_text : String = "1".to_string();
     let mut show : i64 = 0;
 
 
@@ -120,8 +127,6 @@ async fn main() {
 
         //ui
         {
-            let next_gen_b = Button::new("Next Gen").position(vec2(screen_width() - 100.0, 20.0)).ui(&mut root_ui());
-            let next_10_gen_b = Button::new("Next 10 Gen").position(vec2(screen_width() - 100.0, 50.0)).ui(&mut root_ui());
             let show_text : String;
 
             match show
@@ -162,78 +167,85 @@ async fn main() {
                 }
 
             }
-
-            if next_10_gen_b
-            {
-                for _ in 0..10
-                {
-                    kill(&mut bodies);
-                    repopulate(&mut bodies);
-                    simulate(&mut bodies);
-                }
-                time = 0.0;
-                gen += 10;
-                match show
-                {
-                    0 => {
-                        rbodies = vec![bodies[0].clone()]
-                    },
-                    1 => {
-                        rbodies = vec![bodies[bodies.len() / 2].clone()]
-                    },
-                    2 => {
-                        rbodies = vec![bodies[bodies.len() - 1].clone()]
-                    },
-                    3 => {
-                        rbodies = bodies.clone();
-                    },
-                    _ => println!("ERR RBDOIES SET"),
-                }
-            }
-
-            if next_gen_b
-            {
-                kill(&mut bodies);
-                repopulate(&mut bodies);
-                simulate(&mut bodies);
-                time = 0.0;
-                gen += 1;
-                match show
-                {
-                    0 => {
-                        rbodies = vec![bodies[0].clone()]
-                    },
-                    1 => {
-                        rbodies = vec![bodies[bodies.len() / 2].clone()]
-                    },
-                    2 => {
-                        rbodies = vec![bodies[bodies.len() - 1].clone()]
-                    },
-                    3 => {
-                        rbodies = bodies.clone();
-                    },
-                    _ => println!("ERR RBDOIES SET"),
-                }
-            }
-            Label::new("Seed ".to_string() + &seed.to_string())
-                .position(vec2(20.0, 10.0)).ui(&mut root_ui());
-
-            Label::new("Gen ".to_string() + &gen.to_string())
-                .position(vec2(20.0, 30.0)).ui(&mut root_ui());
-
-            Label::new("Time ".to_string() + &time.to_string())
-                .position(vec2(20.0, 50.0)).ui(&mut root_ui());
-
-            Label::new("Distance ".to_string() + &rbodies[0].get_average_distance().to_string())
-                .position(vec2(20.0, 70.0)).ui(&mut root_ui());
-
-            Label::new("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string())
-                .position(vec2(20.0, 90.0)).ui(&mut root_ui());
-
-            Label::new("Mean dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string())
-                .position(vec2(20.0, 110.0)).ui(&mut root_ui());
         }
-        
+        //egui
+        {
+            egui_macroquad::ui(|egui_ctx| {
+                egui::Window::new("dashboard")
+                    .show(egui_ctx, |ui| {
+                        ui.collapsing("info", |ui|{
+                            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP),|ui| {
+                                ui.label("Seed ".to_string() + &seed.to_string());
+                                if ui.button("📋").clicked()
+                                {
+                                    ui.output_mut(|o| o.copied_text = seed.to_string());
+                                }
+                            });
+                            
+                            ui.label("Gen ".to_string() + &gen.to_string());
+                            ui.label("Distance ".to_string() + &rbodies[0].get_average_distance().to_string());
+                            ui.label("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string());
+                            ui.label("Mean dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string());
+                        });
+                        ui.collapsing("controls", |ui|{
+                            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP),|ui| {
+                                if ui.button("Do").clicked()
+                                {
+                                    ui.output_mut(|o| o.copied_text = seed.to_string());
+                                    if add_gens_text.parse::<u32>().is_ok()
+                                    {
+                                        for _ in 0..add_gens_text.parse::<u32>().unwrap() as usize
+                                        {
+                                            kill(&mut bodies);
+                                            repopulate(&mut bodies);
+                                            simulate(&mut bodies);
+                                            time = 0.0;
+                                            gen += add_gens_text.parse::<u32>().unwrap();
+                                            match show
+                                            {
+                                                0 => {
+                                                    rbodies = vec![bodies[0].clone()]
+                                                },
+                                                1 => {
+                                                    rbodies = vec![bodies[bodies.len() / 2].clone()]
+                                                },
+                                                2 => {
+                                                    rbodies = vec![bodies[bodies.len() - 1].clone()]
+                                                },
+                                                3 => {
+                                                    rbodies = bodies.clone();
+                                                },
+                                                _ => println!("ERR RBDOIES SET"),
+                                            }
+                                        }
+                
+                                    }
+                                    else
+                                    {
+                                        add_gens_text = "1".to_string();
+                                    }
+                                }
+                                ui.add(egui::TextEdit::singleline(&mut add_gens_text)
+                                    .desired_width(30.0)
+                                    .desired_rows(1)
+                                );
+                                ui.label("Gens ".to_string());
+                            });
+                        });
+                        
+                    });
+                
+                let mut visuals = egui::Visuals::light();
+                visuals.window_shadow.extrusion = 0.0;
+
+                let style = egui::Style {
+                    visuals,
+                    ..Default::default()
+                };
+                egui_ctx.set_style(style);
+            });
+            egui_macroquad::draw();
+        }
         //camera
         {
             //TODO FIX ZOOM SO WORKS WHEN SCALE SCREEN!
@@ -241,7 +253,7 @@ async fn main() {
             let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
             cam.target.x = rbodies[0].pos.x + rbodies[0].get_average_distance();
             cam.target.y = Settings::FLOOR_Y - 100.0;
-            set_camera(&cam);
+            //set_camera(&cam);
         }
 
         next_frame().await
