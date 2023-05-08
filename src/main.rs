@@ -127,7 +127,7 @@ async fn main() {
                 egui::Window::new("dashboard")
                     .show(egui_ctx, |ui| {
                         ui.collapsing("info", |ui|{
-                            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP),|ui| {
+                            ui.horizontal(|ui| {
                                 ui.label("Seed ".to_string() + &seed.to_string());
                                 if ui.button("📋").clicked()
                                 {
@@ -136,12 +136,13 @@ async fn main() {
                             });
                             
                             ui.label("Gen ".to_string() + &gen.to_string());
+                            ui.label("Time ".to_string() + &time.to_string());
                             ui.label("Distance ".to_string() + &rbodies[0].get_average_distance().to_string());
                             ui.label("Best dist ".to_string() + &bodies[0].distance.unwrap().to_string());
                             ui.label("Mean dist ".to_string() + &(bodies.iter().map(|i| i.distance.unwrap()).sum::<f32>() / bodies.len() as f32).to_string());
                         });
                         ui.collapsing("controls", |ui|{
-                            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP),|ui| {
+                            ui.horizontal(|ui| {
                                 if ui.button("Do").clicked()
                                 {
                                     ui.output_mut(|o| o.copied_text = seed.to_string());
@@ -153,23 +154,23 @@ async fn main() {
                                             repopulate(&mut bodies);
                                             simulate(&mut bodies);
                                             time = 0.0;
-                                            gen += add_gens_text.parse::<u32>().unwrap();
-                                            match show
-                                            {
-                                                ShowTypes::Best => {
-                                                    rbodies = vec![bodies[0].clone()]
-                                                },
-                                                ShowTypes::Median => {
-                                                    rbodies = vec![bodies[bodies.len() / 2].clone()]
-                                                },
-                                                ShowTypes::Worst => {
-                                                    rbodies = vec![bodies[bodies.len() - 1].clone()]
-                                                },
-                                                ShowTypes::All => {
-                                                    rbodies = bodies.clone();
-                                                },
-                                                _ => println!("ERR RBDOIES SET"),
-                                            }
+                                        }
+                                        gen += add_gens_text.parse::<u32>().unwrap();
+                                        match show
+                                        {
+                                            ShowTypes::Best => {
+                                                rbodies = vec![bodies[0].clone()]
+                                            },
+                                            ShowTypes::Median => {
+                                                rbodies = vec![bodies[bodies.len() / 2].clone()]
+                                            },
+                                            ShowTypes::Worst => {
+                                                rbodies = vec![bodies[bodies.len() - 1].clone()]
+                                            },
+                                            ShowTypes::All => {
+                                                rbodies = bodies.clone();
+                                            },
+                                            _ => println!("ERR RBDOIES SET"),
                                         }
                 
                                     }
@@ -182,11 +183,13 @@ async fn main() {
                                     .desired_width(30.0)
                                     .desired_rows(1)
                                 );
-                                ui.label("Gens ".to_string());
+                                ui.label("Gen(s) ".to_string());
 
                             });
                             let show_before = show.clone();
-                            egui::ComboBox::from_label("Take your pick")
+                            ui.horizontal(|ui| {
+                                ui.label("View");
+                                egui::ComboBox::from_label("")
                                 .selected_text(format!("{:?}", show))
                                 .show_ui(ui, |ui| {
                                     ui.style_mut().wrap = Some(false);
@@ -196,6 +199,8 @@ async fn main() {
                                     ui.selectable_value(& mut show, ShowTypes::Worst, "Worst");
                                     ui.selectable_value(& mut show, ShowTypes::All, "All");
                                 });
+                            });
+                            
                             if show != show_before
                             {
                                 time = 0.0;
@@ -243,7 +248,6 @@ async fn main() {
 
         next_frame().await
     }
-
 }
 fn create (bodies : &mut Vec<Body>, n : usize)
 {
