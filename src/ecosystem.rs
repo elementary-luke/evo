@@ -138,50 +138,72 @@ impl Ecosystem
 
     pub fn run_view(&mut self)
     {
-        if is_key_pressed(KeyCode::R)
+        // if is_key_pressed(KeyCode::R)
+        // {
+        //     self.time = 0.0;
+        //     self.update_rbodies();
+        //     self.rbodies.push(self.rbodies[0].clone());
+        //     self.rbodies[0].flip();
+        //     self.rbodies[0].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+        //     self.rbodies[1].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+        // }
+
+        //draw signs
+        for i in 0..(((self.bodies[self.gen as usize - 1][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
-            self.time = 0.0;
-            self.update_rbodies();
-            self.rbodies[0].flip();
+            let y = Settings::FLOOR_Y - 250.0;
+            let w = 80.0;
+            let h = 40.0;
+            let x = screen_width()/2.0 + i as f32 * 200.0 + self.bodies[self.gen as usize - 1][0].start_avg_x - w / 2.0;
+            draw_rectangle(x, 
+                y, 
+                w, 
+                h, 
+                WHITE
+            );
+            draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
+            draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
+            draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
         }
         for i in 0..(((self.bodies[self.gen as usize - 1][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
-            {
-                let y = Settings::FLOOR_Y - 250.0;
-                let w = 80.0;
-                let h = 40.0;
-                let x = screen_width()/2.0 + i as f32 * 200.0 + self.bodies[self.gen as usize - 1][0].start_avg_x - w / 2.0;
-                draw_rectangle(x, 
-                    y, 
-                    w, 
-                    h, 
-                    WHITE
-                );
-                draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
-                draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
-                draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
-            }
-            //draw ground
-            draw_rectangle(-screen_width(), 
-                Settings::FLOOR_Y, 
-                screen_width() * 2.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap(), 
-                screen_height() - Settings::FLOOR_Y, 
-                color_u8!(192.0, 255.0, 133.0, 255.0)
+        {
+            let y = Settings::FLOOR_Y - 250.0;
+            let w = 80.0;
+            let h = 40.0;
+            let x = screen_width()/2.0 + i as f32 * -200.0 + self.bodies[self.gen as usize - 1][0].start_avg_x - w / 2.0;
+            draw_rectangle(x, 
+                y, 
+                w, 
+                h, 
+                WHITE
             );
+            draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
+            draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
+            draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
+        }
 
-            self.time += 1.0/60.0;
-            for i in 0..self.rbodies.len()
+        //draw ground
+        draw_rectangle(-screen_width(), 
+            Settings::FLOOR_Y, 
+            screen_width() * 2.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap(), 
+            screen_height() - Settings::FLOOR_Y, 
+            color_u8!(192.0, 255.0, 133.0, 255.0)
+        );
+
+        self.time += 1.0/60.0;
+        for i in 0..self.rbodies.len()
+        {
+            self.rbodies[i].update(self.time);
+            self.rbodies[i].draw();
+            if self.rbodies.len() > 1
             {
-                self.rbodies[i].update(self.time);
-                self.rbodies[i].draw();
-                if self.rbodies.len() > 1
-                {
-                    self.rbodies[i].set_alpha((self.bodies[self.gen as usize - 1].len()-1-i) as f32/(self.bodies[self.gen as usize - 1].len() - 1) as f32);
-                }
-                else 
-                {
-                    self.rbodies[0].set_alpha(0.8);
-                }
+                self.rbodies[i].set_alpha((self.bodies[self.gen as usize - 1].len()-1-i) as f32/(self.bodies[self.gen as usize - 1].len() - 1) as f32);
             }
+            else 
+            {
+                self.rbodies[0].set_alpha(0.8);
+            }
+        }
     }
 
     pub fn run_gui(&mut self)
