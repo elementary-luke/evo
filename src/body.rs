@@ -13,6 +13,8 @@ pub struct Body
     pub circles : Vec<Circle>,
     pub muscles : Vec<Muscle>,
     pub distance : Option<f32>,
+    pub parent : Option<(usize, usize)>,
+    pub children : Vec<(usize, usize)>,
 }
 
 impl Body
@@ -21,14 +23,14 @@ impl Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None};
+        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None, parent : None, children : Vec::new()};
         body
     }
     pub fn new_random(x_bound : f32, y_bound : f32) -> Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None};
+        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None, parent : None, children : Vec::new()};
         
         for _ in 0..rand::gen_range(Settings::MIN_CIRCLES, Settings::MAX_CIRCLES)
         {
@@ -133,6 +135,7 @@ impl Body
         self.circles.iter_mut().for_each(|c| c.pos.x *= -1.0);
         self.set_start_avg();
     }
+    
     pub fn mutate(&mut self)
     {
         if  rand::gen_range(0, 3) == 0
@@ -208,6 +211,10 @@ impl Body
     }
     pub fn remove_muscle(&mut self)
     {
+        if self.muscles.len() == 0
+        {
+            return;
+        }
         self.muscles.remove(rand::gen_range(0, self.muscles.len()));
     }
     pub fn minor_change(&mut self)
