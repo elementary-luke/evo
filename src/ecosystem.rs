@@ -21,7 +21,7 @@ pub struct Ecosystem
     paused_before : bool,
     bodies : Vec<Vec<Body>>,
     rbodies : Vec<Body>,
-    gen : u32,
+    gen : usize,
     add_gens_text : String,
     show : ShowTypes,
     custom_show : usize,
@@ -39,7 +39,7 @@ impl Ecosystem
             paused_before : false,
             bodies : Vec::new(),
             rbodies : Vec::new(),
-            gen : 1,
+            gen : 0,
             add_gens_text : "1".to_string(),
             show : ShowTypes::Best,
             custom_show : 1,
@@ -62,12 +62,12 @@ impl Ecosystem
         self.bodies.push(Vec::new());
         self.create(Settings::POPULATION_SIZE);
         self.simulate();
-        self.rbodies = vec![self.bodies[self.gen as usize -1][0].clone()];
+        self.rbodies = vec![self.bodies[self.gen][0].clone()];
     }
 
     pub fn create (&mut self, n : usize)
     {
-        let bodies = &mut self.bodies[self.gen as usize - 1];
+        let bodies = &mut self.bodies[self.gen];
         for _ in 0..n
         {
             bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
@@ -76,11 +76,10 @@ impl Ecosystem
 
     pub fn kill(&mut self)
     {
-        let bodies = &mut self.bodies.last_mut().unwrap();
         let mut to_kill : Vec<usize> = Vec::new();
-        for i in 0..(bodies.len() / 2)
+        for i in 0..(self.bodies[self.gen + 1].len() / 2)
         {
-            let f : f32 = i as f32 / bodies.len() as f32;
+            let f : f32 = i as f32 / self.bodies[self.gen + 1].len() as f32;
             let r : f32 = (rand::gen_range(-1.0 as f32, 1.0 as f32).powf(3.0) + 1.0) / 2.0;
             if f > r
             {
@@ -88,35 +87,41 @@ impl Ecosystem
             }
             else 
             {
-                to_kill.push(bodies.len() - 1 - i);
+                to_kill.push(self.bodies[self.gen + 1].len() - 1 - i);
             }
+        }
+
+        for i in 0..self.bodies[self.gen + 1].len()
+        {
+            self.bodies[self.gen + 1][i].previous = Some(i);
+            self.bodies[self.gen + 1][i].age += 1;
         }
         
         to_kill.sort();
         to_kill.reverse();
         for i in to_kill
         {
-            bodies.remove(i);
+            self.bodies[self.gen + 1].remove(i);
         }
     }
 
     pub fn repopulate(&mut self)
     {
-        let bodies = &mut self.bodies.last_mut().unwrap();
         let mut new_bodies : Vec<Body> = Vec::new();
-        for i in 0..bodies.len()
+        for i in 0..self.bodies[self.gen + 1].len()
         {
-            let mut new_body = bodies[i].clone();
-            new_body.parent = Some((self.gen as usize, i));
-            bodies[i].children.push((self.gen as usize + 1, new_bodies.len()));
+            let mut new_body = self.bodies[self.gen + 1][i].clone();
+            new_body.parent = Some((self.gen, i));
+            let index = self.bodies[self.gen + 1].len() + i;
+            self.bodies[self.gen][i].children.push((self.gen + 1, index));
+            new_body.previous = None;
             new_body.distance = None;
             new_body.mutate();
             new_bodies.push(new_body);
         }
-        bodies.append(&mut new_bodies);
+        self.bodies[self.gen + 1].append(&mut new_bodies);
     }
 
-    //TODO CHANGE IT SO TEMP IS CHANGED NOT THE ACTUAL BODY
     pub fn simulate(&mut self)
     {
         let bodies = &mut self.bodies.last_mut().unwrap();
@@ -132,14 +137,28 @@ impl Ecosystem
             let dist = bodies[i].clone().simulate();
     
             //if it went backwards flip it
-            if dist < 0.0
-            {
-                //bodies[i].flip(); // TODO FIX THIS AS IF BEST IS FLIPPED DOESNT DO THE SAME THING
-            }
+            // if dist < 0.0
+            // {
+            //     bodies[i].flip(); // TODO FIX THIS AS IF BEST IS FLIPPED DOESNT DO THE SAME THING
+            // }
             bodies[i].distance = Some(dist.abs());
         }
         bodies.retain(|b| !b.distance.unwrap().is_nan());
         bodies.sort_by(|a, b| b.distance.partial_cmp(&a.distance).unwrap());
+
+        //set nexts
+        if self.gen + 1 != self.bodies.len() // make sure doesn't do it for when first creating population
+        {
+            for i in 0..self.bodies[self.gen + 1].len()
+            {
+                if self.bodies[self.gen + 1][i].previous.is_some()
+                {
+                    let index = self.bodies[self.gen + 1][i].previous.unwrap();
+                    self.bodies[self.gen][index].next = Some(i);
+                    println!("{} -> {}", index, i);
+                }
+            }
+        }
     }
 
     pub fn run_view(&mut self)
@@ -176,7 +195,7 @@ impl Ecosystem
             self.rbodies[i].draw();
             if self.rbodies.len() > 1
             {
-                self.rbodies[i].set_alpha((self.bodies[self.gen as usize - 1].len()-1-i) as f32/(self.bodies[self.gen as usize - 1].len() - 1) as f32);
+                self.rbodies[i].set_alpha((self.bodies[self.gen].len()-1-i) as f32/(self.bodies[self.gen].len() - 1) as f32);
             }
             else 
             {
@@ -205,12 +224,12 @@ impl Ecosystem
     }
     pub fn draw_signs(&mut self)
     {
-        for i in 0..(((self.bodies[self.gen as usize - 1][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
+        for i in 0..(((self.bodies[self.gen][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
             let y = Settings::FLOOR_Y - 250.0;
             let w = 80.0;
             let h = 40.0;
-            let x = screen_width()/2.0 + i as f32 * 200.0 + self.bodies[self.gen as usize - 1][0].start_avg_x - w / 2.0;
+            let x = screen_width()/2.0 + i as f32 * 200.0 + self.bodies[self.gen][0].start_avg_x - w / 2.0;
             draw_rectangle(x, 
                 y, 
                 w, 
@@ -221,12 +240,12 @@ impl Ecosystem
             draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
             draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
         }
-        for i in 0..(((self.bodies[self.gen as usize - 1][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
+        for i in 0..(((self.bodies[self.gen][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
             let y = Settings::FLOOR_Y - 250.0;
             let w = 80.0;
             let h = 40.0;
-            let x = screen_width()/2.0 + i as f32 * -200.0 + self.bodies[self.gen as usize - 1][0].start_avg_x - w / 2.0;
+            let x = screen_width()/2.0 + i as f32 * -200.0 + self.bodies[self.gen][0].start_avg_x - w / 2.0;
             draw_rectangle(x, 
                 y, 
                 w, 
@@ -241,9 +260,9 @@ impl Ecosystem
 
     pub fn draw_ground(&mut self)
     {
-        draw_rectangle(-screen_width() * 5.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap(), 
+        draw_rectangle(-screen_width() * 5.0 + self.bodies[self.gen][0].distance.unwrap(), 
             Settings::FLOOR_Y, 
-            (screen_width() * 5.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap()) * 2.0, 
+            (screen_width() * 5.0 + self.bodies[self.gen][0].distance.unwrap()) * 2.0, 
             screen_height() - Settings::FLOOR_Y, 
             color_u8!(192.0, 255.0, 133.0, 255.0)
         );
@@ -266,12 +285,21 @@ impl Ecosystem
                             {
                                 self.paused = !self.paused;
                             }
+                            
+                            if self.time != 0.0
+                            {
+                                if ui.button("↺").clicked()
+                                {
+                                    self.time = 0.0;
+                                    self.update_rbodies();
+                                }
+                            }
 
                             ui.label("time: ".to_string() + &self.time.to_string());
                         });
                         ui.horizontal(|ui| {
-                            ui.label("View Gen".to_string());
-                            if ui.add(egui::Slider::new(&mut self.gen, 1..=self.bodies.len() as u32)).changed()
+                            ui.label("View Year".to_string());
+                            if ui.add(egui::Slider::new(&mut self.gen, 0..=self.bodies.len() - 1)).changed()
                             {
                                 self.update_rbodies();
                             }
@@ -284,14 +312,15 @@ impl Ecosystem
                                 {
                                     self.time = 0.0;
                                     self.paused_before = false;
+                                    self.gen = self.bodies.len() - 1;
                                     for _ in 0..self.add_gens_text.parse::<u32>().unwrap() as usize
                                     {
-                                        self.bodies.push(self.bodies[self.gen as usize - 1].clone());
+                                        self.bodies.push(self.bodies[self.gen].clone());
                                         self.kill();
                                         self.repopulate();
                                         self.simulate();
+                                        self.gen += 1;
                                     }
-                                    self.gen = self.bodies.len() as u32;
                                     self.update_rbodies();
                                 }
                                 else
@@ -303,7 +332,7 @@ impl Ecosystem
                                 .desired_width(30.0)
                                 .desired_rows(1)
                             );
-                            ui.label("Gen(s) ".to_string());
+                            ui.label("Year(s) ".to_string());
 
                         });
                         let show_before = self.show.clone();
@@ -333,9 +362,9 @@ impl Ecosystem
                             };
 
                             let text = self.custom_show.to_string() + suffix;
-                            if ui.add(egui::Slider::new(&mut self.custom_show, 1..=self.bodies[self.gen as usize - 1].len()).text(text)).changed()
+                            if ui.add(egui::Slider::new(&mut self.custom_show, 1..=self.bodies[self.gen].len()).text(text).drag_value_speed(1.0)).changed()
                             {
-                                self.rbodies = vec![self.bodies[self.gen as usize - 1][self.custom_show - 1].clone()];
+                                self.rbodies = vec![self.bodies[self.gen][self.custom_show - 1].clone()];
                             }
                         }
                         
@@ -346,12 +375,12 @@ impl Ecosystem
                         }
                     });
                     
-                    ui.collapsing("Gen Info", |ui| {
+                    ui.collapsing("Year Info", |ui| {
                         
-                        ui.label("Best dist ".to_string() + &self.bodies[self.gen as usize - 1][0].distance.unwrap().to_string());
-                        ui.label("Mean dist ".to_string() + &(self.bodies[self.gen as usize - 1].iter().map(|i| i.distance.unwrap()).sum::<f32>() / self.bodies[self.gen as usize - 1].len() as f32).to_string());
-                        ui.label("Median dist ".to_string() + &self.bodies[self.gen as usize - 1][self.bodies[self.gen as usize - 1].len() / 2].distance.unwrap().to_string());
-                        ui.label("Worst dist ".to_string() + &self.bodies[self.gen as usize - 1].last().unwrap().distance.unwrap().to_string());
+                        ui.label("Best dist ".to_string() + &self.bodies[self.gen][0].distance.unwrap().to_string());
+                        ui.label("Mean dist ".to_string() + &(self.bodies[self.gen].iter().map(|i| i.distance.unwrap()).sum::<f32>() / self.bodies[self.gen].len() as f32).to_string());
+                        ui.label("Median dist ".to_string() + &self.bodies[self.gen][self.bodies[self.gen].len() / 2].distance.unwrap().to_string());
+                        ui.label("Worst dist ".to_string() + &self.bodies[self.gen].last().unwrap().distance.unwrap().to_string());
                     });
                     if self.show != ShowTypes::All
                     {
@@ -362,6 +391,47 @@ impl Ecosystem
                             if ui.button("see family tree").clicked()
                             {
                                 self.screen = Screens::FamilyTree;
+                            }
+                            ui.label("age ".to_string() + &self.rbodies[0].age.to_string() + " years");
+                            if self.rbodies[0].previous.is_some()
+                            {
+                                if ui.button("see this a year ago").clicked()
+                                {
+                                    self.time = 0.0;
+                                    self.gen -= 1;
+                                    self.show = ShowTypes::Custom;
+                                    self.custom_show = self.rbodies[0].previous.unwrap() + 1;
+                                    self.update_rbodies();
+                                }
+                                if ui.button("see when born").clicked()
+                                {
+                                    self.time = 0.0;
+                                    let (gen, index) = self.get_earliest(self.gen, self.custom_show - 1);
+                                    self.gen = gen;
+                                    self.show = ShowTypes::Custom;
+                                    self.custom_show = index + 1;
+                                    self.update_rbodies();
+                                }
+                            }
+                            if self.rbodies[0].next.is_some()
+                            {
+                                if ui.button("see this a year later").clicked()
+                                {
+                                    self.time = 0.0;
+                                    self.gen += 1;
+                                    self.show = ShowTypes::Custom;
+                                    self.custom_show = self.rbodies[0].next.unwrap() + 1;
+                                    self.update_rbodies();
+                                }
+                                if ui.button("see most recent").clicked()
+                                {
+                                    self.time = 0.0;
+                                    let (gen, index) = self.get_latest(self.gen, self.custom_show - 1);
+                                    self.gen = gen;
+                                    self.show = ShowTypes::Custom;
+                                    self.custom_show = index + 1;
+                                    self.update_rbodies();
+                                }
                             }
                         });
                     }
@@ -389,25 +459,42 @@ impl Ecosystem
         set_camera(&cam);
     }
 
+    fn get_earliest(&mut self, gen : usize, index : usize) -> (usize, usize)
+    {
+        if self.bodies[gen][index].previous.is_none()
+        {
+            return (gen, index);
+        }
+        return self.get_earliest(gen - 1, self.bodies[gen][index].previous.unwrap());
+    }
+    fn get_latest(&mut self, gen : usize, index : usize) -> (usize, usize)
+    {
+        if self.bodies[gen][index].next.is_none()
+        {
+            return (gen, index);
+        }
+        return self.get_latest(gen + 1, self.bodies[gen][index].next.unwrap());
+    }
+
     pub fn update_rbodies(&mut self)
     {
         self.paused_before = false;
         match self.show
         {
             ShowTypes::Best => {
-                self.rbodies = vec![self.bodies[self.gen as usize - 1][0].clone()]
+                self.rbodies = vec![self.bodies[self.gen][0].clone()]
             },
             ShowTypes::Median => {
-                self.rbodies = vec![self.bodies[self.gen as usize - 1][ self.bodies[self.gen as usize - 1].len() / 2].clone()]
+                self.rbodies = vec![self.bodies[self.gen][ self.bodies[self.gen].len() / 2].clone()]
             },
             ShowTypes::Worst => {
-                self.rbodies = vec![self.bodies[self.gen as usize - 1].last().unwrap().clone()]
+                self.rbodies = vec![self.bodies[self.gen].last().unwrap().clone()]
             },
             ShowTypes::Custom => {
-                self.rbodies = vec![self.bodies[self.gen as usize - 1][self.custom_show - 1].clone()];
+                self.rbodies = vec![self.bodies[self.gen][self.custom_show - 1].clone()];
             },
             ShowTypes::All => {
-                self.rbodies = self.bodies[self.gen as usize - 1].clone();
+                self.rbodies = self.bodies[self.gen].clone();
             },
             _ => println!("ERR update_rbodies(&mut self) in ecosystem.rs {:?}", self.show),
         }

@@ -15,6 +15,29 @@ pub struct Body
     pub distance : Option<f32>,
     pub parent : Option<(usize, usize)>,
     pub children : Vec<(usize, usize)>,
+    pub previous : Option<usize>,
+    pub next : Option<usize>,
+    pub age : usize,
+}
+
+impl Default for Body
+{
+    fn default() -> Self
+    {
+        Body 
+        {
+            start_avg_x : 0.0,
+            pos : Point {x : 0.0, y : 0.0},
+            circles : Vec::new(),
+            muscles : Vec::new(),
+            distance : None,
+            parent : None,
+            children : Vec::new(),
+            age : 0,
+            previous : None,
+            next : None,
+        }
+    }
 }
 
 impl Body
@@ -23,14 +46,14 @@ impl Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None, parent : None, children : Vec::new()};
+        let body : Body = Body {..Default::default()};
         body
     }
     pub fn new_random(x_bound : f32, y_bound : f32) -> Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let mut body : Body = Body {pos : Point {x : 0.0, y : 0.0}, circles, muscles, start_avg_x : 0.0, distance : None, parent : None, children : Vec::new()};
+        let mut body : Body = Body {..Default::default()};
         
         for _ in 0..rand::gen_range(Settings::MIN_CIRCLES, Settings::MAX_CIRCLES)
         {
