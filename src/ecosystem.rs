@@ -112,9 +112,8 @@ impl Ecosystem
         {
             let mut new_body = self.bodies[self.gen + 1][i].clone();
             new_body.parent = Some((self.gen, i));
-            let index = self.bodies[self.gen + 1].len() + i;
-            self.bodies[self.gen][i].children.push((self.gen + 1, index));
             new_body.previous = None;
+            new_body.age = 0;
             new_body.distance = None;
             new_body.mutate();
             new_bodies.push(new_body);
@@ -146,7 +145,7 @@ impl Ecosystem
         bodies.retain(|b| !b.distance.unwrap().is_nan());
         bodies.sort_by(|a, b| b.distance.partial_cmp(&a.distance).unwrap());
 
-        //set nexts
+        //set nexts and children
         if self.gen + 1 != self.bodies.len() // make sure doesn't do it for when first creating population
         {
             for i in 0..self.bodies[self.gen + 1].len()
@@ -155,7 +154,12 @@ impl Ecosystem
                 {
                     let index = self.bodies[self.gen + 1][i].previous.unwrap();
                     self.bodies[self.gen][index].next = Some(i);
-                    println!("{} -> {}", index, i);
+                }
+                else
+                //if self.bodies[self.gen + 1][i].parent.is_some()
+                {
+                    let (gen, index) = self.get_earliest(self.bodies[self.gen + 1][i].parent.unwrap().0, self.bodies[self.gen + 1][i].parent.unwrap().1);
+                    self.bodies[gen][index].children.push((gen + 1, i));
                 }
             }
         }
@@ -290,7 +294,6 @@ impl Ecosystem
                             {
                                 if ui.button("↺").clicked()
                                 {
-                                    self.time = 0.0;
                                     self.update_rbodies();
                                 }
                             }
@@ -310,7 +313,6 @@ impl Ecosystem
                                 ui.output_mut(|o| o.copied_text = self.seed.to_string());
                                 if self.add_gens_text.parse::<u32>().is_ok()
                                 {
-                                    self.time = 0.0;
                                     self.paused_before = false;
                                     self.gen = self.bodies.len() - 1;
                                     for _ in 0..self.add_gens_text.parse::<u32>().unwrap() as usize
@@ -370,7 +372,6 @@ impl Ecosystem
                         
                         if self.show != show_before
                         {
-                            self.time = 0.0;
                             self.update_rbodies();
                         }
                     });
@@ -397,7 +398,6 @@ impl Ecosystem
                             {
                                 if ui.button("see this a year ago").clicked()
                                 {
-                                    self.time = 0.0;
                                     self.gen -= 1;
                                     self.show = ShowTypes::Custom;
                                     self.custom_show = self.rbodies[0].previous.unwrap() + 1;
@@ -405,7 +405,6 @@ impl Ecosystem
                                 }
                                 if ui.button("see when born").clicked()
                                 {
-                                    self.time = 0.0;
                                     let (gen, index) = self.get_earliest(self.gen, self.custom_show - 1);
                                     self.gen = gen;
                                     self.show = ShowTypes::Custom;
@@ -417,7 +416,6 @@ impl Ecosystem
                             {
                                 if ui.button("see this a year later").clicked()
                                 {
-                                    self.time = 0.0;
                                     self.gen += 1;
                                     self.show = ShowTypes::Custom;
                                     self.custom_show = self.rbodies[0].next.unwrap() + 1;
@@ -425,8 +423,18 @@ impl Ecosystem
                                 }
                                 if ui.button("see most recent").clicked()
                                 {
-                                    self.time = 0.0;
                                     let (gen, index) = self.get_latest(self.gen, self.custom_show - 1);
+                                    self.gen = gen;
+                                    self.show = ShowTypes::Custom;
+                                    self.custom_show = index + 1;
+                                    self.update_rbodies();
+                                }
+                            }
+                            if self.rbodies[0].parent.is_some()
+                            {
+                                let (gen, index) = self.get_latest_up_to_view_gen(self.rbodies[0].parent.unwrap().0, self.rbodies[0].parent.unwrap().1);
+                                if ui.button("see parent".to_string() + if gen < self.gen {"[dead]"} else {""}).clicked()
+                                {
                                     self.gen = gen;
                                     self.show = ShowTypes::Custom;
                                     self.custom_show = index + 1;
@@ -476,18 +484,31 @@ impl Ecosystem
         return self.get_latest(gen + 1, self.bodies[gen][index].next.unwrap());
     }
 
+    fn get_latest_up_to_view_gen(&mut self, gen : usize, index : usize) -> (usize, usize)
+    {
+        if self.bodies[gen][index].next.is_none() || gen == self.gen
+        {
+            return (gen, index);
+        }
+        return self.get_latest(gen + 1, self.bodies[gen][index].next.unwrap());
+    }
+
     pub fn update_rbodies(&mut self)
     {
+        self.time = 0.0;
         self.paused_before = false;
         match self.show
         {
             ShowTypes::Best => {
+                self.custom_show = 1;
                 self.rbodies = vec![self.bodies[self.gen][0].clone()]
             },
             ShowTypes::Median => {
+                self.custom_show = self.bodies[self.gen].len() / 2 + 1;
                 self.rbodies = vec![self.bodies[self.gen][ self.bodies[self.gen].len() / 2].clone()]
             },
             ShowTypes::Worst => {
+                self.custom_show = self.bodies[self.gen].len();
                 self.rbodies = vec![self.bodies[self.gen].last().unwrap().clone()]
             },
             ShowTypes::Custom => {
