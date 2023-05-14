@@ -17,12 +17,15 @@ pub struct Ecosystem
 {
     seed : u64,
     time : f32,
+    paused : bool,
+    paused_before : bool,
     bodies : Vec<Vec<Body>>,
     rbodies : Vec<Body>,
     gen : u32,
     add_gens_text : String,
     show : ShowTypes,
     custom_show : usize,
+    screen : Screens,
 }
 
 impl Ecosystem
@@ -32,12 +35,15 @@ impl Ecosystem
         Ecosystem {
             seed : 0,
             time : 0.0,
+            paused : false,
+            paused_before : false,
             bodies : Vec::new(),
             rbodies : Vec::new(),
             gen : 1,
             add_gens_text : "1".to_string(),
             show : ShowTypes::Best,
             custom_show : 1,
+            screen : Screens::Simulation,
         }
     }
 
@@ -147,8 +153,58 @@ impl Ecosystem
         //     self.rbodies[0].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
         //     self.rbodies[1].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
         // }
+        
+        self.draw_sky();
+        self.draw_signs();
+        self.draw_ground();
 
-        //draw signs
+        
+        for i in 0..self.rbodies.len()
+        {
+            if !self.paused
+            {
+                self.rbodies[i].update(self.time);
+
+                if self.time > Settings::TIME_GIVEN || 
+                    self.rbodies.len() == 1 && self.rbodies[0].circles.iter().all(|c| c.on_floor) && !self.paused_before
+                {
+                    self.paused = true;
+                    self.paused_before = true;
+                }
+            }
+
+            self.rbodies[i].draw();
+            if self.rbodies.len() > 1
+            {
+                self.rbodies[i].set_alpha((self.bodies[self.gen as usize - 1].len()-1-i) as f32/(self.bodies[self.gen as usize - 1].len() - 1) as f32);
+            }
+            else 
+            {
+                self.rbodies[0].set_alpha(0.8);
+            }
+        }
+
+        if !self.paused
+        {
+            self.time += 1.0/60.0;
+        }
+    }
+
+    pub fn draw_sky(&mut self)
+    {
+        if self.paused_before
+        {
+            // if creature's best distance is given, goes into night
+            clear_background(color_u8!(	34.0, 51.0, 64.0, 1.0));
+        }
+        else 
+        {
+            //day
+            clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
+        }
+    }
+    pub fn draw_signs(&mut self)
+    {
         for i in 0..(((self.bodies[self.gen as usize - 1][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
             let y = Settings::FLOOR_Y - 250.0;
@@ -181,31 +237,17 @@ impl Ecosystem
             draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
             draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
         }
+    }
 
-        //draw ground
-        draw_rectangle(-screen_width(), 
+    pub fn draw_ground(&mut self)
+    {
+        draw_rectangle(-screen_width() * 5.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap(), 
             Settings::FLOOR_Y, 
-            screen_width() * 2.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap(), 
+            (screen_width() * 5.0 + self.bodies[self.gen as usize - 1][0].distance.unwrap()) * 2.0, 
             screen_height() - Settings::FLOOR_Y, 
             color_u8!(192.0, 255.0, 133.0, 255.0)
         );
-
-        self.time += 1.0/60.0;
-        for i in 0..self.rbodies.len()
-        {
-            self.rbodies[i].update(self.time);
-            self.rbodies[i].draw();
-            if self.rbodies.len() > 1
-            {
-                self.rbodies[i].set_alpha((self.bodies[self.gen as usize - 1].len()-1-i) as f32/(self.bodies[self.gen as usize - 1].len() - 1) as f32);
-            }
-            else 
-            {
-                self.rbodies[0].set_alpha(0.8);
-            }
-        }
     }
-
     pub fn run_gui(&mut self)
     {
         egui_macroquad::ui(|egui_ctx| {
@@ -219,6 +261,14 @@ impl Ecosystem
                         }
                     });
                     ui.collapsing("Controls", |ui| {
+                        ui.horizontal( |ui| {
+                            if ui.button(if !self.paused {"⏸"} else {"▶"} ).clicked()
+                            {
+                                self.paused = !self.paused;
+                            }
+
+                            ui.label("time: ".to_string() + &self.time.to_string());
+                        });
                         ui.horizontal(|ui| {
                             ui.label("View Gen".to_string());
                             if ui.add(egui::Slider::new(&mut self.gen, 1..=self.bodies.len() as u32)).changed()
@@ -232,13 +282,14 @@ impl Ecosystem
                                 ui.output_mut(|o| o.copied_text = self.seed.to_string());
                                 if self.add_gens_text.parse::<u32>().is_ok()
                                 {
+                                    self.time = 0.0;
+                                    self.paused_before = false;
                                     for _ in 0..self.add_gens_text.parse::<u32>().unwrap() as usize
                                     {
                                         self.bodies.push(self.bodies[self.gen as usize - 1].clone());
                                         self.kill();
                                         self.repopulate();
                                         self.simulate();
-                                        self.time = 0.0;
                                     }
                                     self.gen = self.bodies.len() as u32;
                                     self.update_rbodies();
@@ -308,9 +359,9 @@ impl Ecosystem
                             ui.label("Distance In Time ".to_string() + &self.rbodies[0].distance.unwrap().to_string());
                             ui.label("Time ".to_string() + &self.time.to_string());
                             ui.label("Distance ".to_string() + &self.rbodies[0].get_average_distance().to_string());
-                            if self.rbodies[0].parent.is_some()
+                            if ui.button("see family tree").clicked()
                             {
-                                ui.label("Parent: gen ".to_string() + &self.rbodies[0].parent.unwrap().0.to_string() + &" index ".to_string() + &self.rbodies[0].parent.unwrap().1.to_string());
+                                self.screen = Screens::FamilyTree;
                             }
                         });
                     }
@@ -340,6 +391,7 @@ impl Ecosystem
 
     pub fn update_rbodies(&mut self)
     {
+        self.paused_before = false;
         match self.show
         {
             ShowTypes::Best => {
@@ -370,4 +422,10 @@ enum ShowTypes
     Worst,
     Custom,
     All,
+}
+#[derive(Debug, Clone, PartialEq)]
+enum Screens
+{
+    Simulation,
+    FamilyTree,
 }

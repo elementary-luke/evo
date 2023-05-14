@@ -112,7 +112,7 @@ impl Body
         let mut time = 0.0;
         loop
         {
-            time += 1.0/60.0;
+            
             self.update(time);
             if self.get_average_distance().is_nan()
             {
@@ -126,7 +126,7 @@ impl Body
             {
                 return self.get_average_distance();
             }
-            
+            time += 1.0/60.0;
         }
         
     }

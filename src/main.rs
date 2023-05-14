@@ -30,7 +30,6 @@ async fn main() {
    let mut sys = Ecosystem::new();
     sys.initialise();
     loop {
-        clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
         sys.run_view();
         sys.run_gui();
         sys.cam();
