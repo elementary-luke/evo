@@ -30,9 +30,22 @@ async fn main() {
    let mut sys = Ecosystem::new();
     sys.initialise();
     loop {
-        sys.run_view();
-        sys.run_gui();
-        sys.cam();
+        match sys.screen
+        {
+            Screens::Simulation => {
+                sys.run_view();
+                sys.run_gui();
+                sys.run_cam();
+            },
+            Screens::FamilyTree => {
+                sys.draw_family_tree();
+                sys.family_tree_cam();
+            },
+            _ => {
+                "sum ting wong";
+            }
+        }
+        
         next_frame().await
     }
 }

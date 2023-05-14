@@ -25,7 +25,8 @@ pub struct Ecosystem
     add_gens_text : String,
     show : ShowTypes,
     custom_show : usize,
-    screen : Screens,
+    tree_cam_pos : Point,
+    pub screen : Screens,
 }
 
 impl Ecosystem
@@ -44,6 +45,7 @@ impl Ecosystem
             show : ShowTypes::Best,
             custom_show : 1,
             screen : Screens::Simulation,
+            tree_cam_pos : Point { x: 0.0, y: 0.0 },
         }
     }
 
@@ -111,7 +113,7 @@ impl Ecosystem
         for i in 0..self.bodies[self.gen + 1].len()
         {
             let mut new_body = self.bodies[self.gen + 1][i].clone();
-            new_body.parent = Some((self.gen, i));
+            new_body.parent = Some((self.gen, self.bodies[self.gen + 1][i].previous.unwrap()));
             new_body.previous = None;
             new_body.age = 0;
             new_body.distance = None;
@@ -159,7 +161,7 @@ impl Ecosystem
                 //if self.bodies[self.gen + 1][i].parent.is_some()
                 {
                     let (gen, index) = self.get_earliest(self.bodies[self.gen + 1][i].parent.unwrap().0, self.bodies[self.gen + 1][i].parent.unwrap().1);
-                    self.bodies[gen][index].children.push((gen + 1, i));
+                    self.bodies[gen][index].children.push((self.gen + 1, i));
                 }
             }
         }
@@ -392,6 +394,7 @@ impl Ecosystem
                             if ui.button("see family tree").clicked()
                             {
                                 self.screen = Screens::FamilyTree;
+                                self.draw_family_tree();
                             }
                             ui.label("age ".to_string() + &self.rbodies[0].age.to_string() + " years");
                             if self.rbodies[0].previous.is_some()
@@ -458,7 +461,7 @@ impl Ecosystem
         egui_macroquad::draw();
     }
 
-    pub fn cam(&mut self)
+    pub fn run_cam(&mut self)
     {
         let zoom = 0.0;
         let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
@@ -475,6 +478,7 @@ impl Ecosystem
         }
         return self.get_earliest(gen - 1, self.bodies[gen][index].previous.unwrap());
     }
+
     fn get_latest(&mut self, gen : usize, index : usize) -> (usize, usize)
     {
         if self.bodies[gen][index].next.is_none()
@@ -520,6 +524,79 @@ impl Ecosystem
             _ => println!("ERR update_rbodies(&mut self) in ecosystem.rs {:?}", self.show),
         }
     }
+
+    fn get_base_parent(&mut self, gen : usize, index : usize) -> (usize, usize)
+    {
+        if self.bodies[gen][index].parent.is_none()
+        {
+            return (gen, index);
+        }
+        return self.get_base_parent(self.bodies[gen][index].parent.unwrap().0, self.bodies[gen][index].parent.unwrap().1);
+    }
+    
+    pub fn draw_family_tree(&mut self)
+    {
+        //TODO make tree not every frame!
+        clear_background(Color::from_rgba(249, 251, 231, 255));
+        let base = self.get_base_parent(self.gen, self.custom_show - 1).1;
+        self.draw_kids(0, base, 0.0);
+        
+    }
+
+    pub fn draw_kids(&mut self, gen : usize, index : usize, row : f32)
+    {
+        let mut row = row;
+        //draw base parent
+        if gen == 0
+        {
+            let mut tree_body = self.bodies[gen][index].clone();
+            tree_body.pos = Point {x : 0.0 , y : row * 400.0};
+            tree_body.draw();
+            row += 1.0;
+        }
+
+        // if no kids return
+        if self.bodies[gen][index].children.len() == 0
+        {
+            return;
+        }
+        
+        //recursive for each childs childs childs...
+        let mut x = 0.0;
+        for (child_gen, child_index) in self.bodies[gen][index].children.clone()
+        {
+            let mut tree_body = self.bodies[child_gen][child_index].clone();
+            tree_body.pos = Point {x, y : row * 400.0};
+            tree_body.draw();
+            self.draw_kids(child_gen, child_index, row + 1.0);
+            x += 400.0;
+        }
+    }
+
+    pub fn family_tree_cam(&mut self)
+    {
+        if is_key_down(KeyCode::S)
+        {
+            self.tree_cam_pos.y += 10.0;
+        }
+        if is_key_down(KeyCode::W)
+        {
+            self.tree_cam_pos.y -= 10.0;
+        }
+        if is_key_down(KeyCode::A)
+        {
+            self.tree_cam_pos.x -= 10.0;
+        }
+        if is_key_down(KeyCode::D)
+        {
+            self.tree_cam_pos.x += 10.0;
+        }
+        let zoom = 0.0;
+        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
+        cam.target.x = self.tree_cam_pos.x;
+        cam.target.y = self.tree_cam_pos.y;
+        set_camera(&cam);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -532,8 +609,10 @@ enum ShowTypes
     All,
 }
 #[derive(Debug, Clone, PartialEq)]
-enum Screens
+pub enum Screens
 {
+    Creation,
     Simulation,
     FamilyTree,
+    Stats,
 }
