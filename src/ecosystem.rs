@@ -539,38 +539,77 @@ impl Ecosystem
         //TODO make tree not every frame!
         clear_background(Color::from_rgba(249, 251, 231, 255));
         let base = self.get_base_parent(self.gen, self.custom_show - 1).1;
-        self.draw_kids(0, base, 0.0);
+        let mut bottom_row : Vec<((usize, usize), (usize, usize))> = vec![];
+        self.get_bottom_row(0, base, &mut bottom_row);
+
+        let mut current_parent : (usize, usize) = bottom_row[0].1;
+        let mut children : Vec<(usize, usize)>= vec![];
+        let mut parents : Vec<(usize, usize)>= vec![];
+        let mut x = 0.0;
+        
+        
+        for ((gen, index), (pgen, pindex)) in bottom_row
+        {
+           if (pgen, pindex) != current_parent
+           {
+                let mut children_xs : Vec<f32> = vec![];
+               
+                for i in children.clone()
+                {
+                    let mut tree_body = self.bodies[i.0][i.1].clone();
+                    tree_body.pos = Point {x, y : 0.0};
+                    tree_body.draw();
+                    children_xs.push(x);
+                    x += 400.0;
+                }
+                let mut par_body = self.bodies[pgen][pindex].clone();
+                par_body.pos = Point {x :  children_xs.iter().sum::<f32>() / children.len() as f32, y : -400.0};
+                par_body.draw();
+
+                for i in children_xs
+                {
+                    draw_line(i, 0.0, par_body.pos.x,  par_body.pos.y, 1.0, BLACK);
+                }
+
+                
+                x += 300.0;
+
+                current_parent = (pgen, pindex);
+                children.clear();
+           }
+           children.push((gen, index));
+        }
+        
         
     }
 
-    pub fn draw_kids(&mut self, gen : usize, index : usize, row : f32)
+    pub fn get_bottom_row(&mut self, gen : usize, index : usize, vec : &mut Vec<((usize, usize), (usize, usize))>)
     {
-        let mut row = row;
-        //draw base parent
-        if gen == 0
-        {
-            let mut tree_body = self.bodies[gen][index].clone();
-            tree_body.pos = Point {x : 0.0 , y : row * 400.0};
-            tree_body.draw();
-            row += 1.0;
-        }
+        // let mut row = row;
+        // //draw base parent
+        // if gen == 0
+        // {
+        //     let mut tree_body = self.bodies[gen][index].clone();
+        //     tree_body.pos = Point {x : 0.0 , y : row * 400.0};
+        //     tree_body.draw();
+        //     row += 1.0;
+        // }
 
         // if no kids return
         if self.bodies[gen][index].children.len() == 0
         {
+            let (mut parent_gen, mut parent_index) = self.bodies[gen][index].parent.unwrap();
+            (parent_gen, parent_index) = self.get_earliest(parent_gen, parent_index);
+            vec.push(((gen, index), (parent_gen, parent_index)));
             return;
         }
         
         //recursive for each childs childs childs...
-        let mut x = 0.0;
         for (child_gen, child_index) in self.bodies[gen][index].children.clone()
         {
-            let mut tree_body = self.bodies[child_gen][child_index].clone();
-            tree_body.pos = Point {x, y : row * 400.0};
-            tree_body.draw();
-            self.draw_kids(child_gen, child_index, row + 1.0);
-            x += 400.0;
+            self.get_bottom_row(child_gen, child_index, vec);
         }
+
     }
 
     pub fn family_tree_cam(&mut self)
