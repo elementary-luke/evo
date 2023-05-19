@@ -6,6 +6,7 @@ mod force;
 mod body;
 mod settings;
 mod ecosystem;
+mod tree_body;
 
 use crate::ecosystem::*;
 use macroquad::color::*;
