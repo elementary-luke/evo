@@ -190,11 +190,13 @@ impl Ecosystem
             {
                 self.rbodies[i].update(self.time);
 
-                if self.time > Settings::TIME_GIVEN || 
-                    self.rbodies.len() == 1 && self.rbodies[0].circles.iter().all(|c| c.on_floor) && !self.paused_before
+                if self.time > Settings::TIME_GIVEN || self.rbodies.len() == 1 && self.rbodies[0].circles.iter().all(|c| c.on_floor)
                 {
-                    self.paused = true;
-                    self.paused_before = true;
+                    if !self.paused_before
+                    {
+                        self.paused_before = true;
+                        self.paused = true;
+                    }
                 }
             }
 
