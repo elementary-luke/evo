@@ -582,10 +582,11 @@ impl Ecosystem
                     continue;
                 }
 
-                let mut x = 0.0;
+                let mut x = -200.0;
 
                 for (gen, index) in self.tree_bodies[row_index][i].children.clone()
                 {
+                    x += 200.0;
                     let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
                     body.pos.x = x;
                     body.pos.y = 400.0;
@@ -598,7 +599,7 @@ impl Ecosystem
                     {
                         println!("AAAAA {x}");
                     }
-                    x += 200.0;
+                    
                 }
                 for i in 0..self.tree_bodies[row_index].len()
                 {
