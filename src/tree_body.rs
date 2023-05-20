@@ -7,8 +7,9 @@ use macroquad::prelude::BLACK;
 use macroquad::qrand as rand;
 use macroquad::text::draw_text;
 use std::cmp::min;
+use std::fmt;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct TreeBody
 {
     pub pos : Point,
@@ -17,6 +18,7 @@ pub struct TreeBody
     pub parent : Option<(usize, usize)>,
     pub children : Vec<(usize, usize)>,
     pub body_array_index : (usize, usize),
+    pub parent_tree_body : Option<(usize, usize)>,
 }
 
 impl Default for TreeBody
@@ -31,7 +33,15 @@ impl Default for TreeBody
             parent : None,
             children : Vec::new(),
             body_array_index : (4200, 4200),
+            parent_tree_body : None,
         }
+    }
+}
+
+impl fmt::Debug for TreeBody
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.body_array_index)
     }
 }
 
@@ -49,24 +59,26 @@ impl TreeBody
     {
         TreeBody
         {
-            pos : body.pos,
+            pos : Point {x : 0.0, y : 0.0},
             circles : body.circles,
             muscles : body.muscles,
             parent : body.parent,
             children : body.children,
             body_array_index : index,
+            parent_tree_body : None,
         }
         
     }
 
-    pub fn draw(&mut self)
+    pub fn draw(&mut self, par_pos : Point)
     {
-        self.muscles.iter_mut().for_each(|m| m.draw(self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
-        self.circles.iter_mut().for_each(|c| c.draw(self.pos)); // TODO + parent pos
-         draw_text(&format!("Gen: {}, Index: {}", self.body_array_index.0, self.body_array_index.1), self.pos.x - 100.0, self.pos.y + 200.0, 20.0, BLACK);
+        self.muscles.iter_mut().for_each(|m| m.draw(par_pos + self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
+        self.circles.iter_mut().for_each(|c| c.draw(par_pos + self.pos));
+        //println!("{:?} {:?}  {:?}", self.body_array_index, par_pos, self.pos);
+        draw_text(&format!("Gen: {}, Index: {}", self.body_array_index.0, self.body_array_index.1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 200.0, 20.0, BLACK);
         if self.parent.is_some()
         {
-            draw_text(&format!("Par Gen: {}, Index: {}", self.parent.unwrap().0, self.parent.unwrap().1), self.pos.x - 100.0, self.pos.y + 250.0, 20.0, BLACK);
+            draw_text(&format!("Par Gen: {}, Index: {}", self.parent.unwrap().0, self.parent.unwrap().1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 250.0, 20.0, BLACK);
         }
     }
 }

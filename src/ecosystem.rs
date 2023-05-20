@@ -398,6 +398,7 @@ impl Ecosystem
                             ui.label("Distance ".to_string() + &self.rbodies[0].get_average_distance().to_string());
                             if ui.button("see family tree").clicked()
                             {
+                                self.tree_bodies.clear();
                                 self.screen = Screens::FamilyTree;
                                 self.calc_family_tree()
                             }
@@ -542,73 +543,97 @@ impl Ecosystem
     pub fn calc_family_tree(&mut self)
     {
         let base = self.get_base_parent(self.gen, self.custom_show - 1).1;
-        let mut current_row : Vec<(usize, usize)> = vec![];
-        self.get_bottom_row(0, base, &mut current_row);
+        // let mut current_row : Vec<(usize, usize)> = vec![];
+        // current_row.push((0, base));
         self.tree_bodies.push(vec![]);
-        let mut row_index = 0; // FROM THE BOTTOM
-        for i in current_row
-        {
-            let mut body = TreeBody::from(self.bodies[i.0][i.1].clone(), (i.0, i.1));
-            if body.parent.is_some()
-            {
-                body.parent = Some(self.get_earliest(body.parent.unwrap().0, body.parent.unwrap().1));
-            }
-            
-            self.tree_bodies[row_index].push(body);
-        }
-        //self.tree_bodies[row_index].sort_by(|a, b| a.body_array_index.0.partial_cmp(&b.body_array_index.0).unwrap());
-        if self.tree_bodies[row_index].len() > 1
-        {
-            self.tree_bodies[row_index].sort_by_key(|item| (item.parent.unwrap().0, item.parent.unwrap().1) );
-        }
+        let mut row_index = 0; // FROM THE TOP
+        self.tree_bodies[row_index].push(TreeBody::from(self.bodies[0][base].clone(), (0, base)));
 
-        let mut x = 0.0;
+        self.tree_bodies.push(vec![]);
         for i in 0..self.tree_bodies[row_index].len()
         {
-            self.tree_bodies[row_index][i].pos.x = x;
-            x += 400.0;
-        }
-
-        self.tree_bodies.push(vec![]);
-        let mut curr_parent = self.tree_bodies[row_index][0].parent.unwrap();
-        row_index += 1;
-        let mut children_xs : Vec<f32> = vec![];
-        let mut y = -200.0;
-        for i in 0..self.tree_bodies[row_index - 1].len()
-        {
-            if self.tree_bodies[row_index - 1][i].parent.unwrap() != curr_parent
+            if self.tree_bodies[row_index][i].children.len() == 0
             {
-                let (gen, index) = self.tree_bodies[row_index - 1][i - 1].parent.unwrap();
-                
-                let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
-                body.pos.x = children_xs.iter().sum::<f32>() / children_xs.len() as f32;
-                body.pos.y = y;
-                if body.parent.is_some()
-                {
-                    body.parent = Some(self.get_earliest(body.parent.unwrap().0, body.parent.unwrap().1));
-                }
-                self.tree_bodies[row_index].push(body);
-                curr_parent = self.tree_bodies[row_index - 1][i].parent.unwrap();
-                children_xs.clear();
+                continue;
             }
-            children_xs.push(self.tree_bodies[row_index - 1][i].pos.x);
+            let mut x = 0.0;
+
+            for (gen, index) in self.tree_bodies[row_index][i].children.clone()
+            {
+                let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
+                body.pos.x = x;
+                body.pos.y = 400.0;
+                let (pgen, pindex) = body.parent.unwrap();
+                body.parent = Some(self.get_earliest(pgen, pindex));
+                body.parent_tree_body = Some((row_index, i));
+                self.tree_bodies[row_index + 1].push(body);
+                x += 200.0;
+            }
         }
+        row_index += 1;
+
+        loop
+        {
+            self.tree_bodies.push(vec![]);
+            for i in 0..self.tree_bodies[row_index].len()
+            {
+                if self.tree_bodies[row_index][i].children.len() == 0
+                {
+                    continue;
+                }
+
+                let mut x = 0.0;
+
+                for (gen, index) in self.tree_bodies[row_index][i].children.clone()
+                {
+                    let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
+                    body.pos.x = x;
+                    body.pos.y = 400.0;
+                    let (pgen, pindex) = body.parent.unwrap();
+                    body.parent = Some(self.get_earliest(pgen, pindex));
+                    body.parent_tree_body = Some((row_index, i));
+                    self.tree_bodies[row_index + 1].push(body);
+                    //println!("{:?}", (gen, index));
+                    if (gen, index) == (4, 29)
+                    {
+                        println!("AAAAA {x}");
+                    }
+                    x += 200.0;
+                }
+                for i in 0..self.tree_bodies[row_index].len()
+                {
+                    if i != self.tree_bodies[row_index].len() - 1
+                    {
+                        self.tree_bodies[row_index][i + 1].pos.x += x;
+                    }
+                }
+            }
+            if self.tree_bodies[row_index].len() == 0
+            {
+                break;
+            }
+            
+            row_index += 1;
+        }
+        println!("{:?}", self.tree_bodies);
+
+        
+        // if row_index > 1
+        // {
+        //     self.tree_bodies[row_index].sort_by_key(|item| (item.parent.unwrap().0, item.parent.unwrap().1) );
+        // }
 
         
     }
-    pub fn get_bottom_row(&mut self, gen : usize, index : usize, vec : &mut Vec<(usize, usize)>)
+
+    fn get_parent_poses(&mut self, gen : usize, index : usize, pos : Point) -> Point
     {
-        if self.bodies[gen][index].children.len() == 0
+        if self.tree_bodies[gen][index].parent_tree_body.is_none()
         {
-            let earliest = self.get_earliest(gen, index);
-            vec.push(earliest);
-            return;
+            return pos
         }
-        for i in self.bodies[gen][index].children.clone()
-        {
-            let earliest = self.get_earliest(i.0, i.1);
-            self.get_bottom_row(earliest.0, earliest.1, vec);
-        }
+        let (pgen, pindex) = self.tree_bodies[gen][index].parent_tree_body.unwrap();
+        return self.get_parent_poses(pgen, pindex, pos + self.tree_bodies[pgen][pindex].pos);
     }
 
     pub fn draw_family_tree(&mut self)
@@ -618,7 +643,16 @@ impl Ecosystem
         {
             for j in 0..self.tree_bodies[i].len()
             {
-                self.tree_bodies[i][j].draw();
+                if self.tree_bodies[i][j].parent_tree_body.is_some()
+                {
+                    let (pgen, pindex) = self.tree_bodies[i][j].parent_tree_body.unwrap();
+                    let par_pos = self.get_parent_poses(pgen, pindex, self.tree_bodies[pgen][pindex].pos);
+                    self.tree_bodies[i][j].draw(par_pos);
+                }
+                else 
+                {
+                    self.tree_bodies[i][j].draw(Point {x : 0.0, y : 0.0});
+                }
             }
         }
         if is_key_pressed(KeyCode::Escape)

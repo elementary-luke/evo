@@ -2,8 +2,8 @@ pub struct Settings {}
 
 impl Settings {
     //creation of creatures
-    pub const RANDOM_SEED : bool = true;
-    pub const SEED : u64 = 0;
+    pub const RANDOM_SEED : bool = false; // TODO MAKE RANDOM AGAIN
+    pub const SEED : u64 = 1684620265;
 
     pub const POPULATION_SIZE : usize = 600;
 
