@@ -549,30 +549,7 @@ impl Ecosystem
         let mut row_index = 0; // FROM THE TOP
         self.tree_bodies[row_index].push(TreeBody::from(self.bodies[0][base].clone(), (0, base)));
 
-        self.tree_bodies.push(vec![]);
-        for i in 0..self.tree_bodies[row_index].len()
-        {
-            if self.tree_bodies[row_index][i].children.len() == 0
-            {
-                continue;
-            }
-            let mut x = 0.0;
-
-            for (gen, index) in self.tree_bodies[row_index][i].children.clone()
-            {
-                let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
-                body.pos.x = x;
-                body.pos.y = 400.0;
-                let (pgen, pindex) = body.parent.unwrap();
-                body.parent = Some(self.get_earliest(pgen, pindex));
-                body.parent_tree_body = Some((row_index, i));
-                self.tree_bodies[row_index + 1].push(body);
-                x += 200.0;
-            }
-        }
-        row_index += 1;
-
-        loop
+        for _ in 0..3
         {
             self.tree_bodies.push(vec![]);
             for i in 0..self.tree_bodies[row_index].len()
@@ -582,7 +559,7 @@ impl Ecosystem
                     continue;
                 }
 
-                let mut x = -200.0;
+                let mut x = -200.0 + -200.0 * (self.tree_bodies[row_index][i].children.len() - 1) as f32 / 2.0;
 
                 for (gen, index) in self.tree_bodies[row_index][i].children.clone()
                 {
@@ -594,20 +571,35 @@ impl Ecosystem
                     body.parent = Some(self.get_earliest(pgen, pindex));
                     body.parent_tree_body = Some((row_index, i));
                     self.tree_bodies[row_index + 1].push(body);
-                    //println!("{:?}", (gen, index));
-                    if (gen, index) == (4, 29)
-                    {
-                        println!("AAAAA {x}");
-                    }
                     
                 }
-                for i in 0..self.tree_bodies[row_index].len()
+                if i == 0
                 {
-                    if i != self.tree_bodies[row_index].len() - 1
-                    {
-                        self.tree_bodies[row_index][i + 1].pos.x += x;
-                    }
+                    self.tree_bodies[row_index][i].pos.x -= x;
                 }
+                else if i == self.tree_bodies[row_index].len() - 1
+                {
+                    self.tree_bodies[row_index][i].pos.x += x;
+                } 
+                else
+                {
+                    for j in 0..i
+                    {
+                        self.tree_bodies[row_index][j].pos.x -= x;
+                    }
+                    for j in i..self.tree_bodies[row_index].len()
+                    {
+                        self.tree_bodies[row_index][j].pos.x += x;
+                    }
+                    //self.tree_bodies[row_index][i].pos.x = self.tree_bodies[row_index][i - 1].pos.x + 200.0;
+                }
+                // for j in 0..self.tree_bodies[row_index].len()
+                // {
+                //     if j != self.tree_bodies[row_index].len() - 1
+                //     {
+                //         self.tree_bodies[row_index][j + 1].pos.x += x;
+                //     }
+                // }
             }
             if self.tree_bodies[row_index].len() == 0
             {
