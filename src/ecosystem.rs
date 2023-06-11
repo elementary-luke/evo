@@ -1,3 +1,6 @@
+use core::num;
+use std::ops::Index;
+
 use crate::body::*;
 use crate::point::*;
 use crate::settings::*;
@@ -27,7 +30,9 @@ pub struct Ecosystem
     show : ShowTypes,
     custom_show : usize,
     tree_cam_pos : Point,
-    tree_bodies : Vec<Vec<TreeBody>>,
+    tree_bodies : Vec<TreeBody>,
+    tree_slide : Option<usize>,
+    slide_index : usize,
     pub screen : Screens,
 }
 
@@ -49,6 +54,8 @@ impl Ecosystem
             custom_show : 1,
             screen : Screens::Simulation,
             tree_cam_pos : Point { x: 0.0, y: 0.0 },
+            tree_slide : None,
+            slide_index : 0,
         }
     }
 
@@ -374,6 +381,7 @@ impl Ecosystem
                             if ui.add(egui::Slider::new(&mut self.custom_show, 1..=self.bodies[self.gen].len()).text(text).drag_value_speed(1.0)).changed()
                             {
                                 self.rbodies = vec![self.bodies[self.gen][self.custom_show - 1].clone()];
+                                self.update_rbodies();
                             }
                         }
                         
@@ -530,124 +538,178 @@ impl Ecosystem
             _ => println!("ERR update_rbodies(&mut self) in ecosystem.rs {:?}", self.show),
         }
     }
-
-    fn get_base_parent(&mut self, gen : usize, index : usize) -> (usize, usize)
-    {
-        if self.bodies[gen][index].parent.is_none()
-        {
-            return (gen, index);
-        }
-        return self.get_base_parent(self.bodies[gen][index].parent.unwrap().0, self.bodies[gen][index].parent.unwrap().1);
-    }
     
+
     pub fn calc_family_tree(&mut self)
     {
-        let base = self.get_base_parent(self.gen, self.custom_show - 1).1;
-        // let mut current_row : Vec<(usize, usize)> = vec![];
-        // current_row.push((0, base));
-        self.tree_bodies.push(vec![]);
-        let mut row_index = 0; // FROM THE TOP
-        self.tree_bodies[row_index].push(TreeBody::from(self.bodies[0][base].clone(), (0, base)));
+        let (mut gen, mut index) = (self.gen, self.custom_show - 1);
+        (gen, index) = self.get_earliest(gen, index);
 
-        for _ in 0..3
+        let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
+        
+        let (mut pgen, mut pindex) = body.parent.unwrap();
+        (pgen, pindex) = self.get_earliest(pgen, pindex);
+        self.slide_index = self.bodies[pgen][pindex].children.iter().position(|&x| x == (gen, index)).unwrap();
+        body.parent = Some((pgen, pindex));
+
+        self.tree_bodies.push(body);
+
+        //add parents
+        let mut pos_y = -500.0;
+        (gen, index) = (pgen, pindex);
+        loop
         {
-            self.tree_bodies.push(vec![]);
-            for i in 0..self.tree_bodies[row_index].len()
+            let mut body = TreeBody::from(self.bodies[pgen][pindex].clone(), (pgen, pindex));
+            if self.bodies[gen][index].parent.is_some()
             {
-                if self.tree_bodies[row_index][i].children.len() == 0
-                {
-                    continue;
-                }
-
-                let mut x = -200.0 + -200.0 * (self.tree_bodies[row_index][i].children.len() - 1) as f32 / 2.0;
-
-                for (gen, index) in self.tree_bodies[row_index][i].children.clone()
-                {
-                    x += 200.0;
-                    let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
-                    body.pos.x = x;
-                    body.pos.y = 400.0;
-                    let (pgen, pindex) = body.parent.unwrap();
-                    body.parent = Some(self.get_earliest(pgen, pindex));
-                    body.parent_tree_body = Some((row_index, i));
-                    self.tree_bodies[row_index + 1].push(body);
-                    
-                }
-                if i == 0
-                {
-                    self.tree_bodies[row_index][i].pos.x -= x;
-                }
-                else if i == self.tree_bodies[row_index].len() - 1
-                {
-                    self.tree_bodies[row_index][i].pos.x += x;
-                } 
-                else
-                {
-                    for j in 0..i
-                    {
-                        self.tree_bodies[row_index][j].pos.x -= x;
-                    }
-                    for j in i..self.tree_bodies[row_index].len()
-                    {
-                        self.tree_bodies[row_index][j].pos.x += x;
-                    }
-                    //self.tree_bodies[row_index][i].pos.x = self.tree_bodies[row_index][i - 1].pos.x + 200.0;
-                }
-                // for j in 0..self.tree_bodies[row_index].len()
-                // {
-                //     if j != self.tree_bodies[row_index].len() - 1
-                //     {
-                //         self.tree_bodies[row_index][j + 1].pos.x += x;
-                //     }
-                // }
+                (pgen, pindex) = self.bodies[gen][index].parent.unwrap();
+                (pgen, pindex) = self.get_earliest(pgen, pindex);
+                body.parent = Some((pgen, pindex));
             }
-            if self.tree_bodies[row_index].len() == 0
+            body.pos.y = pos_y;
+            pos_y -= 500.0;
+            self.tree_bodies.insert(0, body);
+            if gen == 0
             {
                 break;
             }
-            
-            row_index += 1;
+            (gen, index) = (pgen, pindex);
         }
-        println!("{:?}", self.tree_bodies);
 
-        
-        // if row_index > 1
-        // {
-        //     self.tree_bodies[row_index].sort_by_key(|item| (item.parent.unwrap().0, item.parent.unwrap().1) );
-        // }
-
-        
+        //add children
+        (gen, index) = (self.gen, self.custom_show - 1);
+        (gen, index) = self.get_earliest(gen, index);
+        if self.bodies[gen][index].children.len() == 0
+        {
+            return;
+        }
+        let (mut cgen, mut cindex) = self.bodies[gen][index].children[0];
+        (cgen, cindex) = self.get_earliest(cgen, cindex);
+        pos_y = 500.0;
+        loop
+        {
+            let mut body = TreeBody::from(self.bodies[cgen][cindex].clone(), (cgen, cindex));
+            if self.bodies[gen][index].parent.is_some()
+            {
+                body.parent = Some((gen, index));
+            }
+            body.pos.y = pos_y;
+            pos_y += 500.0;
+            self.tree_bodies.push(body);
+            if self.bodies[cgen][cindex].children.len() == 0
+            {
+                break;
+            }
+            (gen, index) = (cgen, cindex);
+        }
     }
 
-    fn get_parent_poses(&mut self, gen : usize, index : usize, pos : Point) -> Point
+    pub fn recalc_family_tree(&mut self)
     {
-        if self.tree_bodies[gen][index].parent_tree_body.is_none()
+        self.tree_bodies = self.tree_bodies[..self.tree_slide.unwrap() + 1].to_vec();
+        let (mut gen, mut index) = self.tree_bodies[self.tree_bodies.len() - 1].body_array_index;
+        (gen, index) = self.get_earliest(gen, index);
+        if self.bodies[gen][index].children.len() == 0
         {
-            return pos
+            return;
         }
-        let (pgen, pindex) = self.tree_bodies[gen][index].parent_tree_body.unwrap();
-        return self.get_parent_poses(pgen, pindex, pos + self.tree_bodies[pgen][pindex].pos);
+        let mut pos_y = self.tree_bodies[self.tree_bodies.len() - 1].pos.y + 500.0;
+        loop
+        { 
+            let (mut cgen, mut cindex) = self.bodies[gen][index].children[0];
+            (cgen, cindex) = self.get_earliest(cgen, cindex);
+            let mut body = TreeBody::from(self.bodies[cgen][cindex].clone(), (cgen, cindex));
+            body.parent = Some((gen, index));
+            body.pos.y = pos_y;
+            pos_y += 500.0;
+            self.tree_bodies.push(body);
+            if self.bodies[cgen][cindex].children.len() == 0
+            {
+                break;
+            }
+            (gen, index) = (cgen, cindex);
+        }
     }
 
     pub fn draw_family_tree(&mut self)
     {
         clear_background(Color::from_rgba(249, 251, 231, 255));
-        for i in 0..self.tree_bodies.len()
+
+        //println!("tree_slide {:?}, slide index {:?}", self.tree_slide, self.slide_index);
+        'outer : for i in 0..self.tree_bodies.len()
         {
-            for j in 0..self.tree_bodies[i].len()
+            if self.tree_slide.is_some() && self.tree_slide == Some(i)
             {
-                if self.tree_bodies[i][j].parent_tree_body.is_some()
+                let (pgen, pindex) = self.tree_bodies[i].parent.unwrap();
+                let num_before = self.slide_index;
+                let mut x = -300.0 * num_before as f32;
+                for j in 0..(num_before as usize)
                 {
-                    let (pgen, pindex) = self.tree_bodies[i][j].parent_tree_body.unwrap();
-                    let par_pos = self.get_parent_poses(pgen, pindex, self.tree_bodies[pgen][pindex].pos);
-                    self.tree_bodies[i][j].draw(par_pos);
+                    let (mut gen, mut index) = self.bodies[pgen][pindex].children[j];
+                    (gen, index) = self.get_earliest(gen, index);
+
+                    let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
+                    body.parent = Some((pgen, pindex));
+                    body.pos.x = x;
+                    body.pos.y = self.tree_bodies[i].pos.y;
+                    body.draw(Point{x:0.0, y:0.0});
+                    x += 300.0;
+                    if body.mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
+                    {
+                        if is_mouse_button_released(MouseButton::Left)
+                        {
+                            self.slide_index = j;
+                            self.tree_bodies[self.tree_slide.unwrap()] = body;
+                            self.recalc_family_tree();
+                            break 'outer;
+                        }
+                    }
                 }
-                else 
+
+                for j in (num_before)..(self.bodies[pgen][pindex].children.len() as usize)
                 {
-                    self.tree_bodies[i][j].draw(Point {x : 0.0, y : 0.0});
+                    let (mut gen, mut index) = self.bodies[pgen][pindex].children[j];
+                    (gen, index) = self.get_earliest(gen, index);
+
+                    let mut body = TreeBody::from(self.bodies[gen][index].clone(), (gen, index));
+                    body.parent = Some((pgen, pindex));
+                    body.pos.x = x;
+                    body.pos.y = self.tree_bodies[i].pos.y;
+                    body.draw(Point{x:0.0, y:0.0});
+                    x += 300.0;
+                    if body.mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
+                    {
+                        if is_mouse_button_released(MouseButton::Left)
+                        {
+                            self.slide_index = j;
+                            self.tree_bodies[self.tree_slide.unwrap()] = body;
+                            self.recalc_family_tree();
+                            break 'outer;
+                        }
+                    }
                 }
             }
+            else
+            {
+                self.tree_bodies[i].draw(Point{x:0.0, y:0.0});
+                if self.tree_bodies[i].mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
+                {
+                    if is_mouse_button_released(MouseButton::Left)
+                    {
+                        for j in 0..self.tree_bodies.len()
+                        {
+                            self.tree_bodies[j].pos.x = 0.0;
+                        }
+                        self.tree_slide = Some(i);
+                        let (pgen, pindex) = self.tree_bodies[i].parent.unwrap();
+                        self.slide_index = self.bodies[pgen][pindex].children.iter().position(|&x| x == self.tree_bodies[i].body_array_index).unwrap();
+                    }
+                }
+            }
+            
+            
         }
+        
         if is_key_pressed(KeyCode::Escape)
         {
             self.screen = Screens::Simulation;
@@ -656,6 +718,38 @@ impl Ecosystem
 
     pub fn family_tree_cam(&mut self)
     {
+        
+        for i in 0..self.tree_bodies.len()
+        {
+            if self.tree_bodies[i].mouse_on(Point {x: mouse_position().0, y: mouse_position().1} + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
+            {
+                if is_mouse_button_released(MouseButton::Left)
+                {
+                    self.tree_slide = Some(i);
+                }
+                
+            }
+        }
+        
+        if self.tree_slide.is_some()
+        {
+            if is_key_released(KeyCode::Right)
+            {
+                self.slide_index += 1;
+            }
+            if is_key_released(KeyCode::Left)
+            {
+                self.slide_index -= 1;
+            }
+            if is_key_released(KeyCode::Left) || is_key_released(KeyCode::Right)
+            {
+
+                
+            }
+        }
+    
+    
+
         if is_key_down(KeyCode::S)
         {
             self.tree_cam_pos.y += 10.0;

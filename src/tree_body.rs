@@ -5,6 +5,7 @@ use crate::muscle::*;
 use crate::settings::Settings;
 use macroquad::prelude::BLACK;
 use macroquad::qrand as rand;
+use macroquad::shapes::draw_line;
 use macroquad::text::draw_text;
 use std::cmp::min;
 use std::fmt;
@@ -79,6 +80,22 @@ impl TreeBody
         if self.parent.is_some()
         {
             draw_text(&format!("Par Gen: {}, Index: {}", self.parent.unwrap().0, self.parent.unwrap().1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 250.0, 20.0, BLACK);
+        }
+
+        // draw_line(par_pos.x, par_pos.y + 200.0, par_pos.x + self.pos.x, par_pos.y + 200.0, 1.0, macroquad::prelude::GREEN);
+        // draw_line(par_pos.x + self.pos.x, par_pos.y + 200.0, par_pos.x + self.pos.x, par_pos.y + self.pos.y + 200.0, 1.0, macroquad::prelude::GREEN);
+    }
+
+    pub fn mouse_on(&mut self, mouse_pos : Point) -> bool
+    {
+        //println!("{:?} {:?}", mouse_pos, self.pos); 
+        if (mouse_pos.x - self.pos.x).abs() < 100.0 && (mouse_pos.y - self.pos.y).abs() < 150.0
+        {
+            return true;
+        }
+        else 
+        {
+            return false;
         }
     }
 }

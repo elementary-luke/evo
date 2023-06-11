@@ -12,6 +12,14 @@ pub struct Point
     pub y : f32,
 }
 
+impl Point
+{
+    pub fn from(tuple : (f32, f32)) -> Point
+    {
+        Point {x : tuple.0, y : tuple.1}
+    }
+}
+
 impl Point 
 {
     pub fn magnitude(&self) -> f32
