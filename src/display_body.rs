@@ -11,62 +11,53 @@ use std::cmp::min;
 use std::fmt;
 
 #[derive(Clone)]
-pub struct TreeBody
+pub struct DisplayBody
 {
     pub pos : Point,
     pub circles : Vec<Circle>,
     pub muscles : Vec<Muscle>,
-    pub parent : Option<(usize, usize)>,
-    pub children : Vec<(usize, usize)>,
     pub body_array_index : (usize, usize),
-    pub parent_tree_body : Option<(usize, usize)>,
 }
 
-impl Default for TreeBody
+impl Default for DisplayBody
 {
     fn default() -> Self
     {
-        TreeBody 
+        DisplayBody 
         {
             pos : Point {x : 0.0, y : 0.0},
             circles : Vec::new(),
             muscles : Vec::new(),
-            parent : None,
-            children : Vec::new(),
             body_array_index : (4200, 4200),
-            parent_tree_body : None,
         }
     }
 }
 
-impl fmt::Debug for TreeBody
+impl fmt::Debug for DisplayBody
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.body_array_index)
     }
 }
 
-impl TreeBody
+impl DisplayBody
 {
-    pub fn new() -> TreeBody // new empty body
+    pub fn new() -> DisplayBody // new empty body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
-        let body = TreeBody {..Default::default()};
+        let body = DisplayBody {..Default::default()};
         body
     }
 
-    pub fn from(body : Body, index : (usize, usize)) -> TreeBody // new body from body
+    pub fn from(body : Body, index : (usize, usize)) -> DisplayBody // new body from body
     {
-        TreeBody
+        DisplayBody
         {
             pos : Point {x : 0.0, y : 0.0},
             circles : body.circles,
             muscles : body.muscles,
-            parent : body.parent,
-            children : body.children,
             body_array_index : index,
-            parent_tree_body : None,
         }
         
     }
@@ -76,14 +67,7 @@ impl TreeBody
         self.muscles.iter_mut().for_each(|m| m.draw(par_pos + self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
         self.circles.iter_mut().for_each(|c| c.draw(par_pos + self.pos));
         //println!("{:?} {:?}  {:?}", self.body_array_index, par_pos, self.pos);
-        draw_text(&format!("Birth year: {}, Place: {}", self.body_array_index.0, self.body_array_index.1 + 1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 200.0, 20.0, BLACK);
-        if self.parent.is_some()
-        {
-            draw_text(&format!("Par Year: {}, Index: {}", self.parent.unwrap().0, self.parent.unwrap().1 + 1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 250.0, 20.0, BLACK);
-        }
-
-        // draw_line(par_pos.x, par_pos.y + 200.0, par_pos.x + self.pos.x, par_pos.y + 200.0, 1.0, macroquad::prelude::GREEN);
-        // draw_line(par_pos.x + self.pos.x, par_pos.y + 200.0, par_pos.x + self.pos.x, par_pos.y + self.pos.y + 200.0, 1.0, macroquad::prelude::GREEN);
+        draw_text(&format!("Place: {}", self.body_array_index.1 + 1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 200.0, 20.0, BLACK);
     }
 
     pub fn mouse_on(&mut self, mouse_pos : Point) -> bool

@@ -7,6 +7,7 @@ mod body;
 mod settings;
 mod ecosystem;
 mod tree_body;
+mod display_body;
 
 use crate::ecosystem::*;
 use macroquad::color::*;
@@ -40,10 +41,16 @@ async fn main() {
             },
             Screens::FamilyTree => {
                 sys.draw_family_tree();
+                sys.family_tree_gui();
                 sys.family_tree_cam();
             },
+            Screens::GenerationDisplay => {
+                sys.draw_generation_display();
+                sys.generation_display_gui();
+                sys.generation_display_cam();
+            },
             _ => {
-                "sum ting wong";
+                println!("sum ting wong 46 main.rs");
             }
         }
         

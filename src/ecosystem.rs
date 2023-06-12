@@ -5,6 +5,7 @@ use crate::body::*;
 use crate::point::*;
 use crate::settings::*;
 use crate::tree_body::*;
+use crate::display_body::*;
 use macroquad::color::*;
 use macroquad::color_u8;
 use macroquad::prelude::Rect;
@@ -21,19 +22,25 @@ pub struct Ecosystem
 {
     seed : u64,
     time : f32,
+    pub screen : Screens,
     paused : bool,
     paused_before : bool,
     bodies : Vec<Vec<Body>>,
     rbodies : Vec<Body>,
+
     gen : usize,
     add_gens_text : String,
     show : ShowTypes,
     custom_show : usize,
+
     tree_cam_pos : Point,
-    tree_bodies : Vec<TreeBody>,
     tree_slide : Option<usize>,
     slide_index : usize,
-    pub screen : Screens,
+    tree_bodies : Vec<TreeBody>,
+    
+    display_cam_pos : Point,
+    display_bodies : Vec<DisplayBody>,
+    display_gen : usize,
 }
 
 impl Ecosystem
@@ -43,19 +50,27 @@ impl Ecosystem
         Ecosystem {
             seed : 0,
             time : 0.0,
+            screen : Screens::Simulation,
             paused : false,
             paused_before : false,
             bodies : Vec::new(),
             rbodies : Vec::new(),
-            tree_bodies : Vec::new(),
+            
             gen : 0,
             add_gens_text : "1".to_string(),
             show : ShowTypes::Best,
             custom_show : 1,
-            screen : Screens::Simulation,
+
+            //family tree
             tree_cam_pos : Point { x: 0.0, y: 0.0 },
             tree_slide : None,
             slide_index : 0,
+            tree_bodies : Vec::new(),
+
+            //generation display
+            display_cam_pos : Point { x: 0.0, y: 0.0 },
+            display_bodies : Vec::new(),
+            display_gen : 0,
         }
     }
 
@@ -392,7 +407,13 @@ impl Ecosystem
                     });
                     
                     ui.collapsing("Year Info", |ui| {
-                        
+                        if ui.button("See All Bodies").clicked()
+                        {
+                            self.screen = Screens::GenerationDisplay;
+                            self.display_gen = self.gen;
+                            self.display_cam_pos = Point {x : 0.0, y : 0.0};
+                            self.calc_generation_display();
+                        }
                         ui.label("Best dist ".to_string() + &self.bodies[self.gen][0].distance.unwrap().to_string());
                         ui.label("Mean dist ".to_string() + &(self.bodies[self.gen].iter().map(|i| i.distance.unwrap()).sum::<f32>() / self.bodies[self.gen].len() as f32).to_string());
                         ui.label("Median dist ".to_string() + &self.bodies[self.gen][self.bodies[self.gen].len() / 2].distance.unwrap().to_string());
@@ -408,7 +429,10 @@ impl Ecosystem
                             {
                                 self.tree_bodies.clear();
                                 self.screen = Screens::FamilyTree;
-                                self.calc_family_tree()
+                                self.calc_family_tree();
+                                self.slide_index = 0;
+                                self.tree_slide = None;
+                                self.tree_cam_pos = Point {x : 0.0, y : 0.0};
                             }
                             ui.label("age ".to_string() + &self.rbodies[0].age.to_string() + " years");
                             if self.rbodies[0].previous.is_some()
@@ -539,7 +563,6 @@ impl Ecosystem
         }
     }
     
-
     pub fn calc_family_tree(&mut self)
     {
         let (mut gen, mut index) = (self.gen, self.custom_show - 1);
@@ -559,6 +582,7 @@ impl Ecosystem
         (gen, index) = (pgen, pindex);
         loop
         {
+            // print!("{:?} ", (gen, index));
             let mut body = TreeBody::from(self.bodies[pgen][pindex].clone(), (pgen, pindex));
             if self.bodies[gen][index].parent.is_some()
             {
@@ -583,11 +607,12 @@ impl Ecosystem
         {
             return;
         }
-        let (mut cgen, mut cindex) = self.bodies[gen][index].children[0];
-        (cgen, cindex) = self.get_earliest(cgen, cindex);
+        let (mut cgen, mut cindex);
         pos_y = 500.0;
         loop
         {
+            (cgen, cindex) = self.bodies[gen][index].children[0];
+            (cgen, cindex) = self.get_earliest(cgen, cindex);
             let mut body = TreeBody::from(self.bodies[cgen][cindex].clone(), (cgen, cindex));
             if self.bodies[gen][index].parent.is_some()
             {
@@ -652,7 +677,10 @@ impl Ecosystem
                     body.parent = Some((pgen, pindex));
                     body.pos.x = x;
                     body.pos.y = self.tree_bodies[i].pos.y;
-                    body.draw(Point{x:0.0, y:0.0});
+                    if (body.pos.x - self.tree_cam_pos.x).abs() < screen_width() && (body.pos.y - self.tree_cam_pos.y).abs() < screen_height()
+                    {
+                        body.draw(Point{x:0.0, y:0.0});
+                    }
                     x += 300.0;
                     if body.mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
                     {
@@ -675,7 +703,10 @@ impl Ecosystem
                     body.parent = Some((pgen, pindex));
                     body.pos.x = x;
                     body.pos.y = self.tree_bodies[i].pos.y;
-                    body.draw(Point{x:0.0, y:0.0});
+                    if (body.pos.x - self.tree_cam_pos.x).abs() < screen_width() && (body.pos.y - self.tree_cam_pos.y).abs() < screen_height()
+                    {
+                        body.draw(Point{x:0.0, y:0.0});
+                    }
                     x += 300.0;
                     if body.mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
                     {
@@ -691,7 +722,10 @@ impl Ecosystem
             }
             else
             {
-                self.tree_bodies[i].draw(Point{x:0.0, y:0.0});
+                if (self.tree_bodies[i].pos.x - self.tree_cam_pos.x).abs() < screen_width() && (self.tree_bodies[i].pos.y - self.tree_cam_pos.y).abs() < screen_height()
+                {
+                    self.tree_bodies[i].draw(Point{x:0.0, y:0.0});
+                }
                 if self.tree_bodies[i].mouse_on(Point::from(mouse_position()) + self.tree_cam_pos - Point {x : screen_width()/2.0, y :screen_height()/2.0})
                 {
                     if is_mouse_button_released(MouseButton::Left)
@@ -772,6 +806,93 @@ impl Ecosystem
         cam.target.y = self.tree_cam_pos.y;
         set_camera(&cam);
     }
+
+    pub fn family_tree_gui(&mut self)
+    {
+        egui_macroquad::ui(|egui_ctx| {
+            egui::Window::new("dashboard").show(egui_ctx, |ui| {
+                if ui.button("back").clicked()
+                {
+                    self.tree_bodies.clear();
+                    self.screen = Screens::Simulation;
+                }
+            });
+        });
+        egui_macroquad::draw();
+    }
+
+    pub fn calc_generation_display(&mut self,)
+    {
+        self.display_bodies.clear();
+        for i in 0..self.bodies[self.gen].len()
+        {
+            self.display_bodies.push(DisplayBody::from(self.bodies[self.display_gen][i].clone(), (self.display_gen, i)));
+        }
+    }
+
+    pub fn draw_generation_display(&mut self)
+    {
+        clear_background(Color::from_rgba(249, 251, 231, 255));
+        let mut x = 0.0;
+        let mut y = 0.0;
+        for i in 0..self.display_bodies.len()
+        {
+            if (x * 300.0 - self.display_cam_pos.x).abs() < screen_width() && (y - self.display_cam_pos.y).abs() < screen_height()
+            {
+                self.display_bodies[i].draw(Point{x : x * 300.0, y});
+            }
+            x += 1.0;
+            if x == 20.0
+            {
+                x = 0.0;
+                y += 500.0;
+            }
+        }
+        if is_key_pressed(KeyCode::Escape)
+        {
+            self.screen = Screens::Simulation;
+        }
+    }
+
+    pub fn generation_display_cam(&mut self)
+    {
+        if is_key_down(KeyCode::S)
+        {
+            self.display_cam_pos.y += 10.0;
+        }
+        if is_key_down(KeyCode::W)
+        {
+            self.display_cam_pos.y -= 10.0;
+        }
+        if is_key_down(KeyCode::A)
+        {
+            self.display_cam_pos.x -= 10.0;
+        }
+        if is_key_down(KeyCode::D)
+        {
+            self.display_cam_pos.x += 10.0;
+        }
+        let zoom = -400.0;
+        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
+        cam.target.x = self.display_cam_pos.x;
+        cam.target.y = self.display_cam_pos.y;
+        set_camera(&cam);
+    }
+
+    pub fn generation_display_gui(&mut self)
+    {
+        egui_macroquad::ui(|egui_ctx| {
+            egui::Window::new("dashboard").show(egui_ctx, |ui| {
+                if ui.button("back").clicked()
+                {
+                    self.display_bodies.clear();
+                    self.screen = Screens::Simulation;
+                }
+            });
+        });
+        egui_macroquad::draw();
+    }
+
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -789,5 +910,6 @@ pub enum Screens
     Creation,
     Simulation,
     FamilyTree,
+    GenerationDisplay,
     Stats,
 }
