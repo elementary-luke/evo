@@ -41,6 +41,10 @@ pub struct Ecosystem
     display_cam_pos : Point,
     display_bodies : Vec<DisplayBody>,
     display_gen : usize,
+    mouse_down_pos : Point,
+    
+    zoom : f32,
+    mouse_on_ui : bool,
 }
 
 impl Ecosystem
@@ -71,6 +75,10 @@ impl Ecosystem
             display_cam_pos : Point { x: 0.0, y: 0.0 },
             display_bodies : Vec::new(),
             display_gen : 0,
+            mouse_down_pos : Point { x: 0.0, y: 0.0 },
+            
+            zoom : 1.0,
+            mouse_on_ui : false,
         }
     }
 
@@ -411,7 +419,10 @@ impl Ecosystem
                         {
                             self.screen = Screens::GenerationDisplay;
                             self.display_gen = self.gen;
+                            self. zoom = 1.0;
                             self.display_cam_pos = Point {x : 0.0, y : 0.0};
+                            //self.zoom = 2.5;
+                            //self.display_cam_pos = Point {x: screen_width(), y: screen_height() / 2.0};
                             self.calc_generation_display();
                         }
                         ui.label("Best dist ".to_string() + &self.bodies[self.gen][0].distance.unwrap().to_string());
@@ -501,8 +512,7 @@ impl Ecosystem
 
     pub fn run_cam(&mut self)
     {
-        let zoom = 0.0;
-        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
+        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
         cam.target.x = self.rbodies[0].pos.x + self.rbodies[0].get_average_distance();
         cam.target.y = Settings::FLOOR_Y - 100.0;
         set_camera(&cam);
@@ -824,7 +834,7 @@ impl Ecosystem
     pub fn calc_generation_display(&mut self,)
     {
         self.display_bodies.clear();
-        for i in 0..self.bodies[self.gen].len()
+        for i in 0..self.bodies[self.display_gen].len()
         {
             self.display_bodies.push(DisplayBody::from(self.bodies[self.display_gen][i].clone(), (self.display_gen, i)));
         }
@@ -837,12 +847,18 @@ impl Ecosystem
         let mut y = 0.0;
         for i in 0..self.display_bodies.len()
         {
-            if (x * 300.0 - self.display_cam_pos.x).abs() < screen_width() && (y - self.display_cam_pos.y).abs() < screen_height()
+            if (x * 300.0 - self.display_cam_pos.x).abs() < screen_width() * self.zoom && (y - self.display_cam_pos.y).abs() < screen_height() * self.zoom
             {
-                self.display_bodies[i].draw(Point{x : x * 300.0, y});
+                self.display_bodies[i].pos = Point {x : x * 300.0, y};
+                self.display_bodies[i].draw(Point{x : 0.0, y : 0.0});
+                self.display_bodies[i].mouse_on(Point::from(mouse_position()) * Point {x : self.zoom, y : self.zoom} + self.display_cam_pos - Point { x: screen_width() / 2.0, y: screen_height() / 2.0 } * Point {x : self.zoom, y : self.zoom} );
+                // println!("{:?}", Point::from(mouse_position()) //* Point {x : self.zoom, y : self.zoom} 
+                //     + self.display_cam_pos 
+                //     - Point {x : screen_width() /2.0, y : screen_height() / 2.0}
+                //     );
             }
             x += 1.0;
-            if x == 20.0
+            if x == 10.0
             {
                 x = 0.0;
                 y += 500.0;
@@ -856,24 +872,45 @@ impl Ecosystem
 
     pub fn generation_display_cam(&mut self)
     {
+        if (is_mouse_button_pressed(MouseButton::Middle) || is_mouse_button_pressed(MouseButton::Right)) && !self.mouse_on_ui
+        {
+            self.mouse_down_pos = Point {x : mouse_position().0, y : mouse_position().1} * Point {x : self.zoom, y : self.zoom} + self.display_cam_pos;
+        }
+        if (is_mouse_button_down(MouseButton::Middle)  || is_mouse_button_down(MouseButton::Right)) && !self.mouse_on_ui
+        {
+            self.display_cam_pos.x = self.mouse_down_pos.x - mouse_position().0 * self.zoom;
+            self.display_cam_pos.y = self.mouse_down_pos.y - mouse_position().1 * self.zoom;
+        }
         if is_key_down(KeyCode::S)
         {
-            self.display_cam_pos.y += 10.0;
+            self.display_cam_pos.y += 10.0 * self.zoom;
         }
         if is_key_down(KeyCode::W)
         {
-            self.display_cam_pos.y -= 10.0;
+            self.display_cam_pos.y -= 10.0 * self.zoom;
         }
         if is_key_down(KeyCode::A)
         {
-            self.display_cam_pos.x -= 10.0;
+            self.display_cam_pos.x -= 10.0 * self.zoom;
         }
         if is_key_down(KeyCode::D)
         {
-            self.display_cam_pos.x += 10.0;
+            self.display_cam_pos.x += 10.0 * self.zoom;
         }
-        let zoom = -400.0;
-        let mut cam = Camera2D::from_display_rect(Rect::new(zoom, zoom, screen_width() - zoom, screen_height() - zoom));
+        if mouse_wheel().1 != 0.0
+        {
+            self.zoom -= mouse_wheel().1 * 0.002;
+            if self.zoom > 2.5
+            {
+                self.zoom = 2.5;
+            }
+            else if self.zoom < 0.52
+            {
+                self.zoom = 0.52;
+            }
+        }
+
+        let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width() * self.zoom, screen_height() * self.zoom));
         cam.target.x = self.display_cam_pos.x;
         cam.target.y = self.display_cam_pos.y;
         set_camera(&cam);
@@ -882,13 +919,33 @@ impl Ecosystem
     pub fn generation_display_gui(&mut self)
     {
         egui_macroquad::ui(|egui_ctx| {
-            egui::Window::new("dashboard").show(egui_ctx, |ui| {
+            let window = egui::Window::new("dashboard").show(egui_ctx, |ui| {
                 if ui.button("back").clicked()
                 {
                     self.display_bodies.clear();
                     self.screen = Screens::Simulation;
                 }
+                ui.horizontal(|ui| {
+                    ui.label("View Year".to_string());
+                    if ui.add(egui::Slider::new(&mut self.display_gen, 0..=self.bodies.len() - 1)).changed()
+                    {
+                        self.calc_generation_display();
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Zoom".to_string());
+                    ui.add(egui::Slider::new(&mut self.zoom, 0.52..=2.5).drag_value_speed(0.01).show_value(false));
+                });
             });
+
+            if window.is_some() && window.unwrap().response.rect.contains(mouse_position().into())
+            {
+                self.mouse_on_ui = true;
+            }
+            else 
+            {
+                self.mouse_on_ui = false;
+            }
         });
         egui_macroquad::draw();
     }

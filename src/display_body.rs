@@ -3,9 +3,13 @@ use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
 use crate::settings::Settings;
+use macroquad::color;
 use macroquad::prelude::BLACK;
+use macroquad::prelude::Color;
+use macroquad::prelude::DARKGRAY;
 use macroquad::qrand as rand;
 use macroquad::shapes::draw_line;
+use macroquad::shapes::draw_rectangle;
 use macroquad::text::draw_text;
 use std::cmp::min;
 use std::fmt;
@@ -17,6 +21,7 @@ pub struct DisplayBody
     pub circles : Vec<Circle>,
     pub muscles : Vec<Muscle>,
     pub body_array_index : (usize, usize),
+    pub dist : f32,
 }
 
 impl Default for DisplayBody
@@ -29,6 +34,7 @@ impl Default for DisplayBody
             circles : Vec::new(),
             muscles : Vec::new(),
             body_array_index : (4200, 4200),
+            dist : 0.0,
         }
     }
 }
@@ -58,6 +64,7 @@ impl DisplayBody
             circles : body.circles,
             muscles : body.muscles,
             body_array_index : index,
+            dist : body.distance.unwrap(),
         }
         
     }
@@ -67,14 +74,17 @@ impl DisplayBody
         self.muscles.iter_mut().for_each(|m| m.draw(par_pos + self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
         self.circles.iter_mut().for_each(|c| c.draw(par_pos + self.pos));
         //println!("{:?} {:?}  {:?}", self.body_array_index, par_pos, self.pos);
-        draw_text(&format!("Place: {}", self.body_array_index.1 + 1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 200.0, 20.0, BLACK);
+        draw_text(&format!("Place: {}", self.body_array_index.1 + 1), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 200.0, 40.0, BLACK);
+        draw_text(&format!("Distance: {:.1}", self.dist), par_pos.x + self.pos.x - 100.0, par_pos.y + self.pos.y + 250.0, 30.0, DARKGRAY);
     }
 
     pub fn mouse_on(&mut self, mouse_pos : Point) -> bool
     {
         //println!("{:?} {:?}", mouse_pos, self.pos); 
-        if (mouse_pos.x - self.pos.x).abs() < 100.0 && (mouse_pos.y - self.pos.y).abs() < 150.0
+        if (mouse_pos.x - self.pos.x).abs() < 100.0 && (mouse_pos.y - (self.pos.y + 150.0)).abs() < 150.0
         {
+            draw_rectangle(self.pos.x-100.0, self.pos.y - 150.0, 200.0, 300.0, Color::from_rgba(0, 0, 0, 122));
+            // println!("ASD");
             return true;
         }
         else 
