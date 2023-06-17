@@ -851,11 +851,18 @@ impl Ecosystem
             {
                 self.display_bodies[i].pos = Point {x : x * 300.0, y};
                 self.display_bodies[i].draw(Point{x : 0.0, y : 0.0});
-                self.display_bodies[i].mouse_on(Point::from(mouse_position()) * Point {x : self.zoom, y : self.zoom} + self.display_cam_pos - Point { x: screen_width() / 2.0, y: screen_height() / 2.0 } * Point {x : self.zoom, y : self.zoom} );
-                // println!("{:?}", Point::from(mouse_position()) //* Point {x : self.zoom, y : self.zoom} 
-                //     + self.display_cam_pos 
-                //     - Point {x : screen_width() /2.0, y : screen_height() / 2.0}
-                //     );
+                if !self.mouse_on_ui && self.display_bodies[i].mouse_on( (Point::from(mouse_position()) - Point { x: screen_width() / 2.0, y: screen_height() / 2.0}) * Point {x : self.zoom, y : self.zoom} + self.display_cam_pos)
+                {
+                    if is_mouse_button_released(MouseButton::Left)
+                    {
+                        self.gen = self.display_bodies[i].body_array_index.0;
+                        self.show = ShowTypes::Custom;
+                        self.custom_show = self.display_bodies[i].body_array_index.1 + 1;
+                        self.update_rbodies();
+                        self.screen = Screens::Simulation;
+                    }
+                }
+            
             }
             x += 1.0;
             if x == 10.0

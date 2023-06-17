@@ -4,6 +4,7 @@ use crate::circle::*;
 use crate::muscle::*;
 use crate::settings::Settings;
 use macroquad::prelude::BLACK;
+use macroquad::prelude::Rect;
 use macroquad::qrand as rand;
 use macroquad::shapes::draw_line;
 use macroquad::text::draw_text;
