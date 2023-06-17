@@ -34,6 +34,9 @@ async fn main() {
     loop {
         match sys.screen
         {
+            Screens::Creation => {
+                sys.creation_gui();
+            },
             Screens::Simulation => {
                 sys.run_view();
                 sys.run_gui();

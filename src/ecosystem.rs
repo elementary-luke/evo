@@ -20,6 +20,7 @@ use macroquad::input::*;
 
 pub struct Ecosystem
 {
+    settings : Settings,
     seed : u64,
     time : f32,
     pub screen : Screens,
@@ -52,9 +53,10 @@ impl Ecosystem
     pub fn new() -> Ecosystem
     {
         Ecosystem {
+            settings : Settings{..Default::default()},
             seed : 0,
             time : 0.0,
-            screen : Screens::Simulation,
+            screen : Screens::Creation,
             paused : false,
             paused_before : false,
             bodies : Vec::new(),
@@ -84,18 +86,18 @@ impl Ecosystem
 
     pub fn initialise(&mut self)
     {
-        if Settings::RANDOM_SEED
+        if self.settings.random_seed
         {
             self.seed = macroquad::miniquad::date::now() as u64;
         }
         else
         {
-            self.seed = Settings::SEED;
+            self.seed = self.settings.seed;
         }
         rand::srand(self.seed);
 
         self.bodies.push(Vec::new());
-        self.create(Settings::POPULATION_SIZE);
+        self.create(self.settings.population_size);
         self.simulate();
         self.rbodies = vec![self.bodies[self.gen][0].clone()];
     }
@@ -105,7 +107,7 @@ impl Ecosystem
         let bodies = &mut self.bodies[self.gen];
         for _ in 0..n
         {
-            bodies.push(Body::new_random(Settings::X_BOUND, Settings::Y_BOUND));
+            bodies.push(Body::new_random(self.settings.x_bound, self.settings.y_bound, &self.settings));
         }
     }
 
@@ -150,7 +152,7 @@ impl Ecosystem
             new_body.previous = None;
             new_body.age = 0;
             new_body.distance = None;
-            new_body.mutate();
+            new_body.mutate(&self.settings);
             new_bodies.push(new_body);
         }
         self.bodies[self.gen + 1].append(&mut new_bodies);
@@ -165,10 +167,10 @@ impl Ecosystem
             {
                 continue;
             }
-            bodies[i].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+            bodies[i].pos = Point {x : screen_width()/2.0, y : self.settings.floor_y - self.settings.y_bound / 2.0};
             bodies[i].set_start_avg();
 
-            let dist = bodies[i].clone().simulate();
+            let dist = bodies[i].clone().simulate(&self.settings);
     
             //if it went backwards flip it
             // if dist < 0.0
@@ -208,8 +210,8 @@ impl Ecosystem
         //     self.update_rbodies();
         //     self.rbodies.push(self.rbodies[0].clone());
         //     self.rbodies[0].flip();
-        //     self.rbodies[0].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
-        //     self.rbodies[1].pos = Point {x : screen_width()/2.0, y : Settings::FLOOR_Y - Settings::Y_BOUND / 2.0};
+        //     self.rbodies[0].pos = Point {x : screen_width()/2.0, y : self.settings.FLOOR_Y - self.settings.Y_BOUND / 2.0};
+        //     self.rbodies[1].pos = Point {x : screen_width()/2.0, y : self.settings.FLOOR_Y - self.settings.Y_BOUND / 2.0};
         // }
         
         self.draw_sky();
@@ -221,9 +223,9 @@ impl Ecosystem
         {
             if !self.paused
             {
-                self.rbodies[i].update(self.time);
+                self.rbodies[i].update(self.time, &self.settings);
 
-                if self.time > Settings::TIME_GIVEN || self.rbodies.len() == 1 && self.rbodies[0].circles.iter().all(|c| c.on_floor)
+                if self.time > self.settings.time_given || self.rbodies.len() == 1 && self.rbodies[0].circles.iter().all(|c| c.on_floor)
                 {
                     if !self.paused_before
                     {
@@ -267,7 +269,7 @@ impl Ecosystem
     {
         for i in 0..(((self.bodies[self.gen][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
-            let y = Settings::FLOOR_Y - 250.0;
+            let y = self.settings.floor_y - 250.0;
             let w = 80.0;
             let h = 40.0;
             let x = screen_width()/2.0 + i as f32 * 200.0 + self.bodies[self.gen][0].start_avg_x - w / 2.0;
@@ -278,12 +280,12 @@ impl Ecosystem
                 WHITE
             );
             draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
-            draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
+            draw_line(x + w / 2.0, self.settings.floor_y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
             draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
         }
         for i in 0..(((self.bodies[self.gen][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
         {
-            let y = Settings::FLOOR_Y - 250.0;
+            let y = self.settings.floor_y - 250.0;
             let w = 80.0;
             let h = 40.0;
             let x = screen_width()/2.0 + i as f32 * -200.0 + self.bodies[self.gen][0].start_avg_x - w / 2.0;
@@ -294,7 +296,7 @@ impl Ecosystem
                 WHITE
             );
             draw_triangle(vec2(x + w / 2.0, y + h + 10.0), vec2(x + w / 2.0 + 10.0, y + h), vec2(x + w / 2.0 - 10.0, y + h), WHITE);
-            draw_line(x + w / 2.0, Settings::FLOOR_Y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
+            draw_line(x + w / 2.0, self.settings.floor_y, x + w / 2.0, y, 2.0, Color {r : 1.0, g : 1.0, b : 1.0, a : 0.4});
             draw_text(&(i * 200).to_string(), x + 10.0, y + 30.0, 40.0, BLACK);
         }
     }
@@ -302,9 +304,9 @@ impl Ecosystem
     pub fn draw_ground(&mut self)
     {
         draw_rectangle(-screen_width() * 5.0 + self.bodies[self.gen][0].distance.unwrap(), 
-            Settings::FLOOR_Y, 
+            self.settings.floor_y, 
             (screen_width() * 5.0 + self.bodies[self.gen][0].distance.unwrap()) * 2.0, 
-            screen_height() - Settings::FLOOR_Y, 
+            screen_height() - self.settings.floor_y, 
             color_u8!(192.0, 255.0, 133.0, 255.0)
         );
     }
@@ -312,6 +314,7 @@ impl Ecosystem
     {
         egui_macroquad::ui(|egui_ctx| {
             egui::Window::new("dashboard")
+                .default_pos((0.0, 0.0))
                 .show(egui_ctx, |ui| {
                     ui.horizontal(|ui| {
                         ui.label("Seed ".to_string() + &self.seed.to_string());
@@ -347,7 +350,6 @@ impl Ecosystem
                         ui.horizontal(|ui| {
                             if ui.button("Do").clicked()
                             {
-                                ui.output_mut(|o| o.copied_text = self.seed.to_string());
                                 if self.add_gens_text.parse::<u32>().is_ok()
                                 {
                                     self.paused_before = false;
@@ -497,15 +499,6 @@ impl Ecosystem
                     }
                     
                 });
-            
-            let mut visuals = egui::Visuals::light();
-            visuals.window_shadow.extrusion = 0.0;
-
-            let style = egui::Style {
-                visuals,
-                ..Default::default()
-            };
-            egui_ctx.set_style(style);
         });
         egui_macroquad::draw();
     }
@@ -514,7 +507,7 @@ impl Ecosystem
     {
         let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
         cam.target.x = self.rbodies[0].pos.x + self.rbodies[0].get_average_distance();
-        cam.target.y = Settings::FLOOR_Y - 100.0;
+        cam.target.y = self.settings.floor_y - 100.0;
         set_camera(&cam);
     }
 
@@ -957,6 +950,91 @@ impl Ecosystem
         egui_macroquad::draw();
     }
 
+    pub fn creation_gui(&mut self)
+    {
+        let defaults = Settings {..Default::default()};
+        egui_macroquad::ui(|egui_ctx| {
+            let window = egui::Window::new("creation screen").resizable(false).collapsible(false).fixed_pos((0.0, 0.0)).show(egui_ctx, |ui| {
+                    egui::Grid::new("some_unique_id").striped(true).show(ui, |ui| {
+                        ui.label("Seed");
+                        if ui.button(if self.settings.random_seed {"random"} else {"custom"}).clicked()
+                        {
+                            self.settings.random_seed = !self.settings.random_seed;
+                        }
+                        if self.settings.random_seed != defaults.random_seed
+                        {
+                            if ui.button("↺").clicked()
+                            {
+                                self.settings.random_seed = defaults.random_seed;
+                            }
+                        }
+                        ui.end_row();
+                        
+
+                        if !self.settings.random_seed
+                        {
+                            ui.label("");
+                            ui.add(egui::DragValue::new(&mut self.seed));
+                            if self.settings.seed != defaults.seed
+                            {
+                                if ui.button("↺").clicked()
+                                {
+                                    self.settings.seed = defaults.seed;
+                                }
+                            }
+                            ui.end_row();
+                        }
+
+                        ui.end_row();
+                        ui.label("Physics");
+                        ui.end_row();
+
+                        ui.label("Gravity");
+                        ui.add(egui::DragValue::new(&mut self.settings.grav).speed(0.01));
+                        if self.settings.grav != defaults.grav
+                        {
+                            if ui.button("↺").clicked()
+                            {
+                                self.settings.grav = defaults.grav;
+                            }
+                        }
+                        ui.end_row();
+
+                        ui.label("Air Resistance");
+                        ui.add(egui::Slider::new(&mut self.settings.drag, 0.0..=1.0));
+                        if self.settings.drag != defaults.drag
+                        {
+                            if ui.button("↺").clicked()
+                            {
+                                self.settings.drag = defaults.drag;
+                            }
+                        }
+                        ui.end_row();
+
+                        ui.end_row();
+                        if ui.button("LETS GOOOO!").clicked()
+                        {
+                            self.screen = Screens::Simulation;
+                        }
+                    });
+
+                ui.allocate_space(egui::Vec2::new(screen_width(), screen_height()));
+            });
+
+            let mut visuals = egui::Visuals::light();
+            visuals.window_shadow.extrusion = 0.0;
+
+            let style = egui::Style {
+                visuals,
+                ..Default::default()
+            };
+            egui_ctx.set_style(style);
+        });
+        
+        egui_macroquad::draw();
+    }
+
+    
 }
 
 #[derive(Debug, Clone, PartialEq)]

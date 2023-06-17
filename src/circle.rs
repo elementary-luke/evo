@@ -1,6 +1,7 @@
 use crate::point::*;
 use crate::force::*;
-use crate::settings::Settings;
+use crate::settings;
+use crate::settings::*;
 use macroquad::color::*;
 use macroquad::window::*;
 use macroquad::qrand as rand;
@@ -22,7 +23,7 @@ pub struct Circle
 
 impl Circle
 {
-    pub fn update(&mut self, body_pos : Point)
+    pub fn update(&mut self, body_pos : Point, settings : &Settings)
     {
         let mut impulse : Point = Point {x: 0.0, y: 0.0};
         for i in 0..self.forces.len()
@@ -35,25 +36,25 @@ impl Circle
                 }
             }
         }
-        self.velocity *= Point {x : Settings::DRAG, y : Settings::DRAG};
+        self.velocity *= Point {x : settings.drag, y : settings.drag};
         self.velocity += impulse;
         self.forces.clear();
         self.forces.push(Force {
             from : ForceTypes::Gravity,
-            strength : Point {x: 0.0, y: Settings::GRAV},
+            strength : Point {x: 0.0, y: settings.grav},
         });
 
         //self.velocity += self.acceleration;
         
-        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= Settings::FLOOR_Y
+        if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= settings.floor_y
         {
             //TODO move the circle to the floor
-            self.pos.y += Settings::FLOOR_Y - (body_pos.y + self.pos.y + self.r);
+            self.pos.y += settings.floor_y - (body_pos.y + self.pos.y + self.r);
             self.velocity.y = 0.0;
             self.acceleration.y = 0.0;
             self.on_floor = true;
         }
-        if self.on_floor && body_pos.y + self.pos.y < Settings::FLOOR_Y - self.r
+        if self.on_floor && body_pos.y + self.pos.y < settings.floor_y - self.r
         {
             self.on_floor = false;
         }
@@ -70,9 +71,9 @@ impl Circle
     {
         draw_circle((self.pos + body_pos).x, (self.pos + body_pos).y, self.r, self.color)
     }
-    pub fn new_random(pos : Point) -> Circle
+    pub fn new_random(pos : Point, settings : &Settings) -> Circle
     {
-        let slip = rand::gen_range(Settings::SLIP_MIN, Settings::SLIP_MAX);
+        let slip = rand::gen_range(settings.slip_min, settings.slip_max);
         Circle {
             pos,
             r: 5.0, 
@@ -84,7 +85,7 @@ impl Circle
             on_floor : false,
         }
     }
-    pub fn mutate(&mut self)
+    pub fn mutate(&mut self, settings : &Settings)
     {
         for _ in 0..2// change to how many mutations you want
         {
@@ -92,11 +93,11 @@ impl Circle
             {
                 0 => {
                     self.pos.x += rand::gen_range(-50.0, 50.0);
-                    self.pos.x = self.pos.x.clamp(-Settings::X_BOUND / 2.0, Settings::X_BOUND / 2.0);
+                    self.pos.x = self.pos.x.clamp(-settings.x_bound / 2.0, settings.x_bound / 2.0);
                 },
                 1 => {
                     self.pos.y += rand::gen_range(-50.0, 50.0);
-                    self.pos.y = self.pos.y.clamp(-Settings::Y_BOUND / 2.0, Settings::Y_BOUND / 2.0);
+                    self.pos.y = self.pos.y.clamp(-settings.y_bound / 2.0, settings.y_bound / 2.0);
                 },
                 2 => {
                     self.slip += rand::gen_range(-0.2, 0.2);

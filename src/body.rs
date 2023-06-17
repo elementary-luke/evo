@@ -1,6 +1,7 @@
 use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
+use crate::settings;
 use crate::settings::Settings;
 use macroquad::qrand as rand;
 use std::cmp::min;
@@ -49,13 +50,13 @@ impl Body
         let body : Body = Body {..Default::default()};
         body
     }
-    pub fn new_random(x_bound : f32, y_bound : f32) -> Body
+    pub fn new_random(x_bound : f32, y_bound : f32, settings : &Settings) -> Body
     {
         let circles : Vec<Circle> = Vec::new();
         let muscles : Vec<Muscle> = Vec::new();
         let mut body : Body = Body {..Default::default()};
         
-        for _ in 0..rand::gen_range(Settings::MIN_CIRCLES, Settings::MAX_CIRCLES)
+        for _ in 0..rand::gen_range(settings.min_circles, settings.max_circles)
         {
             let x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
             let y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);
@@ -72,7 +73,7 @@ impl Body
             //     break;
             // }
             
-            body.circles.push(Circle::new_random(Point {x, y})); 
+            body.circles.push(Circle::new_random(Point {x, y}, settings)); 
         }
         
         // make sure every circle is connected
@@ -84,7 +85,7 @@ impl Body
             {
                 continue;
             }
-            body.muscles.push( Muscle::new_random( i, connected[rand::gen_range(0, connected.len())] ) );
+            body.muscles.push( Muscle::new_random(i, connected[rand::gen_range(0, connected.len())], settings) );
             connected.push(i);
         }
 
@@ -107,7 +108,7 @@ impl Body
                 continue;
             }
 
-            body.muscles.push(Muscle::new_random(from, to));
+            body.muscles.push(Muscle::new_random(from, to, settings));
         }
         body
     }
@@ -121,22 +122,22 @@ impl Body
         self.muscles.iter_mut().for_each(|m| m.draw(self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
         self.circles.iter_mut().for_each(|c| c.draw(self.pos));
     }
-    pub fn update(&mut self, time : f32)
+    pub fn update(&mut self, time : f32, settings : &Settings)
     {
         self.muscles.iter_mut().for_each(|m| m.update(time, &mut self.circles));
-        self.circles.iter_mut().for_each(|c| c.update(self.pos));
+        self.circles.iter_mut().for_each(|c| c.update(self.pos, settings));
     }
     pub fn get_average_distance(&self) -> f32
     {
         self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32 - self.start_avg_x
     }
-    pub fn simulate(&mut self) -> f32
+    pub fn simulate(&mut self, settings : &Settings) -> f32
     {
         let mut time = 0.0;
         loop
         {
             
-            self.update(time);
+            self.update(time, settings);
             if self.get_average_distance().is_nan()
             {
                 return 0.0;
@@ -145,7 +146,7 @@ impl Body
             {
                 return self.get_average_distance();
             }
-            if time > Settings::TIME_GIVEN
+            if time > settings.time_given
             {
                 return self.get_average_distance();
             }
@@ -159,40 +160,40 @@ impl Body
         self.set_start_avg();
     }
     
-    pub fn mutate(&mut self)
+    pub fn mutate(&mut self, settings : &Settings)
     {
         if  rand::gen_range(0, 3) == 0
         {
-            self.major_change();
+            self.major_change(settings);
         }
         else 
         {
-            self.minor_change();
+            self.minor_change(settings);
         }
         self.set_start_avg();
     }
-    pub fn major_change(&mut self)
+    pub fn major_change(&mut self, settings : &Settings)
     {
         match rand::gen_range(0, 4)
         {
-            0 => self.add_circle(),
+            0 => self.add_circle(settings),
             1 => self.remove_circle(),
-            2 => self.add_muscle(),
+            2 => self.add_muscle(settings),
             3 => self.remove_muscle(),
             _ => println!("ERROR: major_change() in body.rs")
         }
             
     }
-    pub fn add_circle(&mut self)
+    pub fn add_circle(&mut self, settings : &Settings)
     {
         let mut can_be_connected = (0..self.circles.len()).collect::<Vec<usize>>();
-        self.circles.push(Circle::new_random(Point {x : rand::gen_range(-Settings::X_BOUND, Settings::X_BOUND), y : rand::gen_range(-Settings::Y_BOUND, Settings::Y_BOUND)}));
+        self.circles.push(Circle::new_random(Point {x : rand::gen_range(-settings.x_bound, settings.x_bound), y : rand::gen_range(-settings.y_bound, settings.y_bound)}, settings));
         for _ in 0..rand_biased(1, can_be_connected.len() as i32, 2.0)
         {
             let can_be_connected_index = rand::gen_range(0, can_be_connected.len());
             let circles_index = can_be_connected[rand::gen_range(0, can_be_connected_index)];
             can_be_connected.remove(can_be_connected_index);
-            self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index));
+            self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index, settings));
         }
     }
     pub fn remove_circle(&mut self)
@@ -216,7 +217,7 @@ impl Body
         self.muscles.retain(|x| x.from != index && x.to != index);
         self.circles.remove(index);
     }
-    pub fn add_muscle(&mut self)
+    pub fn add_muscle(&mut self, settings : &Settings)
     {
         if self.circles.len() < 2
         {
@@ -230,7 +231,7 @@ impl Body
             return;
         }
 
-        self.muscles.push(Muscle::new_random(from, to));
+        self.muscles.push(Muscle::new_random(from, to, settings));
     }
     pub fn remove_muscle(&mut self)
     {
@@ -240,7 +241,7 @@ impl Body
         }
         self.muscles.remove(rand::gen_range(0, self.muscles.len()));
     }
-    pub fn minor_change(&mut self)
+    pub fn minor_change(&mut self, settings : &Settings)
     {
         if rand::gen_range(0, 2) == 0
         {
@@ -260,7 +261,7 @@ impl Body
                 return;
             }
             let index = rand::gen_range(0, self.circles.len());
-            self.circles[index].mutate();
+            self.circles[index].mutate(settings);
         }
     }
     pub fn link_loners(&mut self)

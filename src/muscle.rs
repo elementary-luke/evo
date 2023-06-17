@@ -4,7 +4,8 @@ use std::cmp::min;
 use crate::circle::*;
 use crate::point::*;
 use crate::force::*;
-use crate::settings::Settings;
+use crate::settings;
+use crate::settings::*;
 use macroquad::qrand as rand;
 use macroquad::color::*;
 use macroquad::prelude::draw_line;
@@ -78,24 +79,24 @@ impl Muscle
     {
         draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, self.color);
     }
-    pub fn new_random(from : usize, to : usize, ) -> Muscle
+    pub fn new_random(from : usize, to : usize, settings : &Settings) -> Muscle
     {   
-        let contracted_len = rand::gen_range(Settings::CONTRACTED_LEN_MIN, Settings::CONTRACTED_LEN_MAX);
-        let extended_len = rand::gen_range(Settings::EXTENDED_LEN_MIN, Settings::EXTENDED_LEN_MAX);
+        let contracted_len = rand::gen_range(settings.contracted_len_min, settings.contracted_len_max);
+        let extended_len = rand::gen_range(settings.extended_len_min, settings.extended_len_max);
         let mut m = Muscle {
             from, 
             to, 
             contracted_len, 
             extended_len, 
-            contracted_time : rand::gen_range(Settings::CONTRACTED_TIME_MIN, Settings::CONTRACTED_TIME_MAX),
-            extended_time : rand::gen_range(Settings::EXTENDED_TIME_MIN, Settings::EXTENDED_TIME_MAX),
-            strength : rand::gen_range(Settings::STRENGTH_MIN, Settings::STRENGTH_MAX), 
+            contracted_time : rand::gen_range(settings.contracted_time_min, settings.contracted_time_max),
+            extended_time : rand::gen_range(settings.extended_time_min, settings.extended_time_max),
+            strength : rand::gen_range(settings.strength_min, settings.strength_max), 
             contracting : ([true, false][rand::gen_range(0, 1)], 0.0),
             color : Color {r: 0.0, g: 0.0, b: 0.0, a: 1.0},
         };
-        m.color = Color {r: 1.0 * (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
-            g: 0.5 *  (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
-            b: 0.0  * (m.strength - Settings::STRENGTH_MIN) / (Settings::STRENGTH_MAX - Settings::STRENGTH_MIN), 
+        m.color = Color {r: 1.0 * (m.strength - settings.strength_min) / (settings.strength_max - settings.strength_min), 
+            g: 0.5 *  (m.strength - settings.strength_min) / (settings.strength_max - settings.strength_min), 
+            b: 0.0  * (m.strength - settings.strength_min) / (settings.strength_max - settings.strength_min), 
             a: 1.0
         };
 
