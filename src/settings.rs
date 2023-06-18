@@ -45,7 +45,7 @@ impl Default for Settings
             random_seed: true, 
             seed: 1684620265, 
             population_size: 600, 
-            x_bound: 200.0, 
+            x_bound: 200.0,
             y_bound: 200.0, 
             slip_min: 0.0, 
             slip_max: 1.0, 
