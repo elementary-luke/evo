@@ -102,7 +102,7 @@ impl Muscle
 
         return m;
     }
-    pub fn mutate(&mut self)
+    pub fn mutate(&mut self, settings : &Settings)
     {
         for _ in 0..2
         {
@@ -115,6 +115,38 @@ impl Muscle
                 4 => self.strength += rand::gen_range(-10.0, 10.0),
                 5 => self.contracting.0 = !self.contracting.0,
                 _ => (),
+            }
+            if self.contracted_len < settings.contracted_len_min
+            {
+                self.contracted_len = settings.contracted_len_min;
+            }
+            if self.contracted_len > settings.contracted_len_max
+            {
+                self.contracted_len = settings.contracted_len_max;
+            }
+            if self.contracted_time < settings.contracted_time_min
+            {
+                self.contracted_time = settings.contracted_time_min;
+            }
+            if self.contracted_time > settings.contracted_time_max
+            {
+                self.contracted_time = settings.contracted_time_max;
+            }
+            if self.extended_len < settings.extended_len_min
+            {
+                self.extended_len = settings.extended_len_min;
+            }
+            if self.extended_len > settings.extended_len_max
+            {
+                self.extended_len = settings.extended_len_max;
+            }
+            if self.strength < settings.strength_min
+            {
+                self.strength = settings.strength_min;
+            }
+            if self.strength > settings.strength_max
+            {
+                self.strength = settings.strength_max;
             }
         }
     }

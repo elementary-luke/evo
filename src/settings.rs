@@ -34,6 +34,7 @@ pub struct Settings {
     pub grav : f32,
     pub drag : f32,
     pub floor_y : f32,
+    pub distance_based_on : usize // 0 is avg, 1 is max
 
 }
 
@@ -65,6 +66,7 @@ impl Default for Settings
             grav: 0.4, 
             drag: 0.9, 
             floor_y: 400.0,
+            distance_based_on: 0,
         }
     }
 }

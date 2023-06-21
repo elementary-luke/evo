@@ -7,6 +7,7 @@ use crate::point::*;
 use crate::settings::*;
 use crate::tree_body::*;
 use crate::display_body::*;
+use egui_macroquad::egui::Button;
 use macroquad::color::*;
 use macroquad::color_u8;
 use macroquad::prelude::Rect;
@@ -438,7 +439,15 @@ impl Ecosystem
                         ui.collapsing("Viewing Creature Info", |ui| {
                             ui.label("Distance In Time ".to_string() + &self.rbodies[0].distance.unwrap().to_string());
                             ui.label("Time ".to_string() + &self.time.to_string());
-                            ui.label("Distance ".to_string() + &self.rbodies[0].get_average_distance().to_string());
+                            if self.settings.distance_based_on == 0
+                            {
+                                ui.label("Distance ".to_string() + &self.rbodies[0].get_average_distance().to_string());
+                            }
+                            else
+                            {
+                                ui.label("Distance ".to_string() + &self.rbodies[0].get_max_distance().to_string());
+                            }
+                            
                             if ui.button("see family tree").clicked()
                             {
                                 self.tree_bodies.clear();
@@ -1128,7 +1137,11 @@ impl Ecosystem
                         ui.label("Heuristic");
                         ui.end_row();
 
-                        ui.label("Distance Based On");//furthest node?
+                        ui.label("Distance Based On");
+                        if ui.button(if self.settings.distance_based_on == 0 {"avg of nodes"} else {"furthest node"}).clicked()
+                        {
+                            self.settings.distance_based_on = 1 - self.settings.distance_based_on;
+                        }
                         ui.end_row();
 
                         ui.label("hurdles");
@@ -1136,6 +1149,7 @@ impl Ecosystem
 
                         if ui.button("LETS GOOOO!").clicked()
                         {
+                            self.initialise();
                             self.screen = Screens::Simulation;
                         }
                     });

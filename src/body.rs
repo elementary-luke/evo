@@ -122,6 +122,7 @@ impl Body
         self.muscles.iter_mut().for_each(|m| m.draw(self.pos, self.circles[m.from].pos, self.circles[m.to].pos));
         self.circles.iter_mut().for_each(|c| c.draw(self.pos));
     }
+
     pub fn update(&mut self, time : f32, settings : &Settings)
     {
         self.muscles.iter_mut().for_each(|m| m.update(time, &mut self.circles));
@@ -130,6 +131,10 @@ impl Body
     pub fn get_average_distance(&self) -> f32
     {
         self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32 - self.start_avg_x
+    }
+    pub fn get_max_distance(&self) -> f32
+    {
+        self.circles.iter().map(|c| c.pos.x.abs()).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap() - self.start_avg_x
     }
     pub fn simulate(&mut self, settings : &Settings) -> f32
     {
@@ -186,6 +191,10 @@ impl Body
     }
     pub fn add_circle(&mut self, settings : &Settings)
     {
+        if self.circles.len() >= settings.max_circles
+        {
+            return;
+        }
         let mut can_be_connected = (0..self.circles.len()).collect::<Vec<usize>>();
         self.circles.push(Circle::new_random(Point {x : rand::gen_range(-settings.x_bound, settings.x_bound), y : rand::gen_range(-settings.y_bound, settings.y_bound)}, settings));
         for _ in 0..rand_biased(1, can_be_connected.len() as i32, 2.0)
@@ -251,7 +260,7 @@ impl Body
                 return;
             }
             let index = rand::gen_range(0, self.muscles.len());
-            self.muscles[index].mutate();
+            self.muscles[index].mutate(settings);
         }
         else
         {

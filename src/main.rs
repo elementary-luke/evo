@@ -30,7 +30,6 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
    let mut sys = Ecosystem::new();
-    sys.initialise();
     loop {
         match sys.screen
         {
