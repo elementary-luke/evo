@@ -27,7 +27,7 @@ pub struct Muscle
 
 impl Muscle
 {
-    pub fn update(&mut self, time : f32, circles : &mut Vec<Circle>)
+    pub fn update(&mut self, time : f32, circles : &mut Vec<Circle>, settings : &Settings, energy_used : &mut f32)
     {
         // TODO CHECK IF WORKS WHEN EXTENDING BUT LENGTH IS BIGGER THAN EXTENDED LENGTH
         if self.contracting.0 && time - self.contracting.1 >= self.contracted_time
@@ -55,6 +55,7 @@ impl Muscle
         let mut accel_from = Point { x: 0.0, y: 0.0 };
         let mut accel_to = Point { x: 0.0, y: 0.0 };
 
+        //put forces on circles
         let nfrom = & circles[self.from];
         let nto = & circles[self.to];
         let current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
@@ -64,6 +65,7 @@ impl Muscle
         accel_from.y += (angle).sin() * force * self.strength / nfrom.r;
         accel_to.x -= (angle).cos() * force * self.strength / nto.r;
         accel_to.y -= (angle).sin() * force * self.strength / nto.r;
+        *energy_used += (force * self.strength / nfrom.r).abs() + (force * self.strength / nto.r).abs();
 
         circles[self.from].forces.push(Force {
             from : ForceTypes::Muscle,
@@ -116,6 +118,7 @@ impl Muscle
                 5 => self.contracting.0 = !self.contracting.0,
                 _ => (),
             }
+            //make sure contraints are followed
             if self.contracted_len < settings.contracted_len_min
             {
                 self.contracted_len = settings.contracted_len_min;

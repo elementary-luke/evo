@@ -1,9 +1,7 @@
 use crate::point::*;
 use crate::force::*;
-use crate::settings;
 use crate::settings::*;
 use macroquad::color::*;
-use macroquad::window::*;
 use macroquad::qrand as rand;
 use macroquad::prelude::draw_circle;
 
@@ -15,7 +13,6 @@ pub struct Circle
     pub color : Color,
     pub slip : f32,
     pub velocity : Point,
-    pub acceleration : Point,
     pub forces : Vec<Force>,
     pub on_floor : bool,
 }
@@ -25,33 +22,87 @@ impl Circle
 {
     pub fn update(&mut self, body_pos : Point, settings : &Settings)
     {
-        let mut impulse : Point = Point {x: 0.0, y: 0.0};
+        let mut acceleration : Point = Point {x: 0.0, y: 0.0};
         for i in 0..self.forces.len()
         {
             match self.forces[i].from
             {
                 ForceTypes::Gravity | ForceTypes::Muscle=> 
                 {
-                    impulse += self.forces[i].strength;
+                    acceleration += self.forces[i].strength;
                 }
             }
         }
+
+        // add velocity based on all forces
         self.velocity *= Point {x : settings.drag, y : settings.drag};
-        self.velocity += impulse;
+        self.velocity += acceleration;
         self.forces.clear();
         self.forces.push(Force {
             from : ForceTypes::Gravity,
             strength : Point {x: 0.0, y: settings.grav},
         });
 
-        //self.velocity += self.acceleration;
+        //collision with terrain
+        for i in 0..settings.terrain.len()
+        {
+            let terrain = settings.terrain[i];
+            let abs_x = body_pos.x + self.pos.x;
+            let abs_y = body_pos.y + self.pos.y;
+
+            //horizontal collision
+            if abs_y + self.r >= terrain.1 && abs_y - self.r <= terrain.3 // if y is in the range of the terrain
+            {
+                if abs_x <= terrain.0 // if circle is to the left of the terrain
+                {
+                    if abs_x + self.r + self.velocity.x >= terrain.0 // if circle will be in the terrain
+                    {
+                        self.pos.x += terrain.0 - (abs_x + self.r);
+                        self.velocity.x = 0.0;
+                        self.velocity.y *= self.slip;
+                    }
+                }
+                if abs_x >= terrain.2 // if circle is to the right of the terrain
+                {
+                    if abs_x - self.r + self.velocity.x <= terrain.2 // if circle will be in the terrain
+                    {
+                        self.pos.x += terrain.2 - (abs_x - self.r);
+                        self.velocity.x = 0.0;
+                        self.velocity.y *= self.slip;
+                    }
+                }
+                
+            }
+            //vertical collision
+            if abs_x + self.r >= terrain.0 && abs_x - self.r <= terrain.2 // if x is in the range of the terrain
+            {
+                if abs_y <= terrain.1 // if circle is above
+                {
+                    if abs_y + self.r + self.velocity.y >= terrain.1 // if circle will be in the terrain
+                    {
+                        self.pos.y += terrain.1 - (abs_y + self.r);
+                        self.velocity.y = 0.0;
+                        self.velocity.x *= self.slip;
+                    }
+                }
+                if abs_y >= terrain.3 // if circle below
+                {
+                    if abs_y - self.r + self.velocity.y <= terrain.3 // if circle will be in the terrain
+                    {
+                        self.pos.y += terrain.3 - (abs_y - self.r);
+                        self.velocity.y = 0.0;
+                        self.velocity.x *= self.slip;
+                    }
+                }
+                
+            }
+        }
         
+        //floor collision
         if self.velocity.y >= 0.0 && body_pos.y + self.pos.y + self.r + self.velocity.y >= settings.floor_y
         {
-            //TODO move the circle to the floor
             self.pos.y += settings.floor_y - (body_pos.y + self.pos.y + self.r);
             self.velocity.y = 0.0;
-            self.acceleration.y = 0.0;
             self.on_floor = true;
         }
         if self.on_floor && body_pos.y + self.pos.y < settings.floor_y - self.r
@@ -64,8 +115,6 @@ impl Circle
         }
 
         self.pos += self.velocity;
-
-        
     }
     pub fn draw(&mut self, body_pos : Point)
     {
@@ -80,7 +129,6 @@ impl Circle
             color: Color { r: 0.9 * slip, g:slip, b: slip, a : 1.0}, 
             slip,
             velocity : Point {x : 0.0, y : 0.0},
-            acceleration : Point {x : 0.0, y : 0.0},
             forces : vec![],
             on_floor : false,
         }

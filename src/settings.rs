@@ -1,3 +1,4 @@
+#[derive(Clone, Debug)]
 pub struct Settings {
     //creation of creatures
     pub random_seed : bool,
@@ -34,8 +35,12 @@ pub struct Settings {
     pub grav : f32,
     pub drag : f32,
     pub floor_y : f32,
-    pub distance_based_on : usize // 0 is avg, 1 is max
-
+    pub distance_based_on : usize, // 0 is avg, 1 is max 
+    pub hurdles : bool,
+    pub ceiling : bool,
+    pub stairs : bool,
+    pub terrain : Vec<(f32, f32, f32, f32)>, //x1, y1, x2, y2
+    pub heuristic : usize,
 }
 
 impl Default for Settings
@@ -67,6 +72,11 @@ impl Default for Settings
             drag: 0.9, 
             floor_y: 400.0,
             distance_based_on: 0,
+            hurdles: false,
+            ceiling: false,
+            stairs: false,
+            terrain: vec![], //(x1, y1, x2, y2)
+            heuristic: 0,
         }
     }
 }

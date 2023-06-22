@@ -37,7 +37,7 @@ async fn main() {
                 sys.creation_gui();
             },
             Screens::Simulation => {
-                sys.run_view();
+                sys.run_view(sys.settings.clone());
                 sys.run_gui();
                 sys.run_cam();
             },

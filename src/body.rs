@@ -19,6 +19,7 @@ pub struct Body
     pub previous : Option<usize>,
     pub next : Option<usize>,
     pub age : usize,
+    pub energy_used : f32,
 }
 
 impl Default for Body
@@ -37,6 +38,7 @@ impl Default for Body
             age : 0,
             previous : None,
             next : None,
+            energy_used : 0.0,
         }
     }
 }
@@ -99,7 +101,6 @@ impl Body
         
         for _ in 0..(rand_biased(0, (max_connections - body.muscles.len()) as i32, 2.0) as usize)
         {
-            //might be too rng and take too long so might have to change VV
             let from = rand::gen_range(0, body.circles.len());
             let to = rand::gen_range(0, body.circles.len());
 
@@ -125,17 +126,25 @@ impl Body
 
     pub fn update(&mut self, time : f32, settings : &Settings)
     {
-        self.muscles.iter_mut().for_each(|m| m.update(time, &mut self.circles));
+        self.muscles.iter_mut().for_each(|m| m.update(time, &mut self.circles, &settings, &mut self.energy_used));
         self.circles.iter_mut().for_each(|c| c.update(self.pos, settings));
     }
+    
     pub fn get_average_distance(&self) -> f32
     {
         self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32 - self.start_avg_x
     }
+
+    pub fn get_average_y(&self) -> f32
+    {
+        self.circles.iter().map(|c| c.pos.y).sum::<f32>() / self.circles.len() as f32
+    }
+
     pub fn get_max_distance(&self) -> f32
     {
         self.circles.iter().map(|c| c.pos.x.abs()).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap() - self.start_avg_x
     }
+
     pub fn simulate(&mut self, settings : &Settings) -> f32
     {
         let mut time = 0.0;
@@ -147,13 +156,28 @@ impl Body
             {
                 return 0.0;
             }
-            if self.circles.iter().all(|c| c.on_floor)
+            if self.circles.iter().all(|c| c.on_floor) || time > settings.time_given
             {
-                return self.get_average_distance();
-            }
-            if time > settings.time_given
-            {
-                return self.get_average_distance();
+                if settings.distance_based_on == 1
+                {
+                    if settings.heuristic == 0
+                    {
+                        return self.get_max_distance();
+                    }
+                    else 
+                    {
+                        return self.get_max_distance() / (self.energy_used * 0.0001);
+                    }
+                }
+
+                if settings.heuristic == 0
+                {
+                    return self.get_average_distance();
+                }
+                else 
+                {
+                    return self.get_average_distance() / (self.energy_used * 0.0001);
+                }
             }
             time += 1.0/60.0;
         }
@@ -226,6 +250,7 @@ impl Body
         self.muscles.retain(|x| x.from != index && x.to != index);
         self.circles.remove(index);
     }
+
     pub fn add_muscle(&mut self, settings : &Settings)
     {
         if self.circles.len() < 2
@@ -250,6 +275,7 @@ impl Body
         }
         self.muscles.remove(rand::gen_range(0, self.muscles.len()));
     }
+
     pub fn minor_change(&mut self, settings : &Settings)
     {
         if rand::gen_range(0, 2) == 0
@@ -273,12 +299,10 @@ impl Body
             self.circles[index].mutate(settings);
         }
     }
-    pub fn link_loners(&mut self)
-    {
-    }
 
     pub fn set_alpha(&mut self, alpha : f32)
     {
+        // for when showing all bodies in gen
         self.circles.iter_mut().for_each(|c| c.color.a = alpha);
         self.muscles.iter_mut().for_each(|m| m.color.a = alpha);
     }

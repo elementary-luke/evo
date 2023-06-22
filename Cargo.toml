@@ -9,3 +9,4 @@ edition = "2021"
 egui-macroquad = "0.15.0"
 macroquad = "0.3"
 normal-rand = { version = "0.8.5", package = "rand" }
+clipboard = "0.5.0"

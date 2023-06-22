@@ -4,9 +4,12 @@ use crate::circle::*;
 use crate::muscle::*;
 use crate::settings::Settings;
 use macroquad::prelude::BLACK;
+use macroquad::prelude::Color;
 use macroquad::prelude::Rect;
+use macroquad::prelude::vec2;
 use macroquad::qrand as rand;
 use macroquad::shapes::draw_line;
+use macroquad::shapes::draw_rectangle;
 use macroquad::text::draw_text;
 use std::cmp::min;
 use std::fmt;
@@ -90,8 +93,9 @@ impl TreeBody
     pub fn mouse_on(&mut self, mouse_pos : Point) -> bool
     {
         //println!("{:?} {:?}", mouse_pos, self.pos); 
-        if (mouse_pos.x - self.pos.x).abs() < 100.0 && (mouse_pos.y - self.pos.y).abs() < 150.0
+        if Rect::new(self.pos.x - 100.0, self.pos.y - 150.0, 200.0, 300.0).contains(vec2(mouse_pos.x, mouse_pos.y))
         {
+            draw_rectangle(self.pos.x-100.0, self.pos.y - 150.0, 200.0, 300.0, Color::from_rgba(0, 0, 0, 61));
             return true;
         }
         else 
