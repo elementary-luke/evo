@@ -18,7 +18,7 @@ use egui_macroquad::*;
 
 fn window_conf() -> Conf {
     Conf {
-        window_title: "My game".to_owned(),
+        window_title: "Evo".to_owned(),
         //fullscreen: true,
         window_width: 1280,
         window_height: 720,

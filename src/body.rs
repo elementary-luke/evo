@@ -142,7 +142,7 @@ impl Body
 
     pub fn get_max_distance(&self) -> f32
     {
-        self.circles.iter().map(|c| c.pos.x.abs()).max_by(|a, b| a.partial_cmp(b).unwrap()).unwrap() - self.start_avg_x
+        self.circles.iter().map(|c| c.pos.x).max_by(|a, b| a.abs().partial_cmp(&b.abs()).unwrap()).unwrap() - self.start_avg_x
     }
 
     pub fn simulate(&mut self, settings : &Settings) -> f32
@@ -206,7 +206,7 @@ impl Body
         match rand::gen_range(0, 4)
         {
             0 => self.add_circle(settings),
-            1 => self.remove_circle(),
+            1 => self.remove_circle(settings),
             2 => self.add_muscle(settings),
             3 => self.remove_muscle(),
             _ => println!("ERROR: major_change() in body.rs")
@@ -215,7 +215,7 @@ impl Body
     }
     pub fn add_circle(&mut self, settings : &Settings)
     {
-        if self.circles.len() >= settings.max_circles
+        if self.circles.len() >= settings.cmax_circles
         {
             return;
         }
@@ -229,9 +229,9 @@ impl Body
             self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index, settings));
         }
     }
-    pub fn remove_circle(&mut self)
+    pub fn remove_circle(&mut self, settings : &Settings)
     {
-        if self.circles.len() == 0
+        if self.circles.len() == 0 || self.circles.len() <= settings.cmin_circles
         {
             return;
         }

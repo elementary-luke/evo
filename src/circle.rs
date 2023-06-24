@@ -154,5 +154,8 @@ impl Circle
                 _ => (),
             }
         }
+        self.pos.x = self.pos.x.clamp(-settings.x_bound / 2.0, settings.x_bound / 2.0);
+        self.pos.y = self.pos.y.clamp(-settings.y_bound / 2.0, settings.y_bound / 2.0);
+        self.slip = self.slip.clamp(settings.cslip_min, settings.cslip_max);
     }
 }

@@ -1,11 +1,12 @@
 #[derive(Clone, Debug)]
 pub struct Settings {
-    //creation of creatures
+    
     pub random_seed : bool,
     pub seed : u64,
 
     pub population_size : usize,
 
+    //creation of base creatures
     pub x_bound : f32,
     pub y_bound : f32,
 
@@ -29,6 +30,31 @@ pub struct Settings {
 
     pub min_circles : usize,
     pub max_circles : usize,
+
+    //children settings
+    pub cx_bound : f32,
+    pub cy_bound : f32,
+
+    pub cslip_min : f32,
+    pub cslip_max : f32,
+
+    pub cstrength_min : f32,
+    pub cstrength_max : f32,
+
+    pub ccontracted_time_min : f32,
+    pub ccontracted_time_max : f32,
+
+    pub cextended_time_min : f32,
+    pub cextended_time_max : f32,
+
+    pub ccontracted_len_min : f32,
+    pub ccontracted_len_max : f32,
+
+    pub cextended_len_min : f32,
+    pub cextended_len_max : f32,
+
+    pub cmin_circles : usize,
+    pub cmax_circles : usize,
 
     //physics
     pub time_given : f32,
@@ -66,7 +92,23 @@ impl Default for Settings
             extended_len_min: 55.0, 
             extended_len_max: 100.0, 
             min_circles: 3, 
-            max_circles: 5, 
+            max_circles: 5,
+            cx_bound: 10000.0,
+            cy_bound: 10000.0, 
+            cslip_min: 0.0, 
+            cslip_max: 1.0,
+            cstrength_min: 0.0, 
+            cstrength_max: 10000.0, 
+            ccontracted_time_min: 0.0, 
+            ccontracted_time_max: 10000.0, 
+            cextended_time_min: 0.0, 
+            cextended_time_max: 10000.0, 
+            ccontracted_len_min: 0.0, 
+            ccontracted_len_max: 10000.0, 
+            cextended_len_min: 0.0, 
+            cextended_len_max: 10000.0, 
+            cmin_circles: 1, 
+            cmax_circles: 10, 
             time_given: 20.0, 
             grav: 0.4, 
             drag: 0.9, 

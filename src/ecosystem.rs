@@ -5,7 +5,6 @@ use crate::tree_body::*;
 use crate::display_body::*;
 use macroquad::color::*;
 use macroquad::color_u8;
-use macroquad::miniquad::gl::GL_PROGRAM_POINT_SIZE;
 use macroquad::prelude::Rect;
 use macroquad::window::*;
 use macroquad::text::*;
@@ -18,6 +17,7 @@ use macroquad::input::*;
 extern crate clipboard;
 use clipboard::ClipboardProvider;
 use clipboard::ClipboardContext;
+use egui::plot::{Line, Plot, PlotPoints, PlotPoint};
 
 pub struct Ecosystem
 {
@@ -34,6 +34,8 @@ pub struct Ecosystem
     add_gens_text : String,
     show : ShowTypes,
     custom_show : usize,
+
+    showing_stats : bool,
 
     tree_cam_pos : Point,
     tree_slide : Option<usize>,
@@ -68,7 +70,10 @@ impl Ecosystem
             show : ShowTypes::Best,
             custom_show : 1,
 
-            //family tree
+            //Stats
+            showing_stats : false,
+
+            //family line
             tree_cam_pos : Point { x: 0.0, y: 0.0 },
             tree_slide : None,
             slide_index : 0,
@@ -202,13 +207,17 @@ impl Ecosystem
             bodies[i].pos = Point {x : screen_width()/2.0, y : self.settings.floor_y - self.settings.y_bound / 2.0};
             bodies[i].set_start_avg();
 
-            let dist = bodies[i].clone().simulate(&self.settings);
+            let mut dist = bodies[i].clone().simulate(&self.settings);
     
             //if it went backwards flip it
             // if dist < 0.0
             // {
             //     bodies[i].flip(); // TODO FIX THIS AS IF BEST IS FLIPPED DOESNT DO THE SAME THING
             // }
+            if dist.is_nan()
+            {
+                dist = 0.0;
+            }
             bodies[i].distance = Some(dist.abs());
         }
         bodies.retain(|b| !b.distance.unwrap().is_nan());
@@ -464,6 +473,11 @@ impl Ecosystem
                         {
                             self.update_rbodies();
                         }
+                        
+                        if ui.button(if !self.showing_stats {"Show Stats"} else {"Hide Stats"}).clicked()
+                        {
+                            self.showing_stats = !self.showing_stats;
+                        }
                     });
                     
                     ui.collapsing("Year Info", |ui| {
@@ -485,6 +499,15 @@ impl Ecosystem
                     if self.show != ShowTypes::All
                     {
                         ui.collapsing("Viewing Creature Info", |ui| {
+                            if self.rbodies.len() == 1 && self.rbodies[0].parent.is_some() && ui.button("see family line").clicked()
+                            {
+                                self.tree_bodies.clear();
+                                self.screen = Screens::FamilyTree;
+                                self.calc_family_tree();
+                                self.slide_index = 0;
+                                self.tree_slide = None;
+                                self.tree_cam_pos = Point {x : 0.0, y : 0.0};
+                            }
                             ui.label("Distance In Time ".to_string() + &self.rbodies[0].distance.unwrap().to_string());
                             ui.label("Time ".to_string() + &self.time.to_string());
                             if self.settings.heuristic == 1
@@ -501,15 +524,6 @@ impl Ecosystem
                                 ui.label("Distance ".to_string() + &self.rbodies[0].get_max_distance().to_string());
                             }
                             
-                            if self.rbodies.len() == 1 && self.rbodies[0].parent.is_some() && ui.button("see family line").clicked()
-                            {
-                                self.tree_bodies.clear();
-                                self.screen = Screens::FamilyTree;
-                                self.calc_family_tree();
-                                self.slide_index = 0;
-                                self.tree_slide = None;
-                                self.tree_cam_pos = Point {x : 0.0, y : 0.0};
-                            }
                             ui.label("age ".to_string() + &self.rbodies[0].age.to_string() + " years");
                             if self.rbodies[0].previous.is_some()
                             {
@@ -557,11 +571,74 @@ impl Ecosystem
                                     self.custom_show = index + 1;
                                     self.update_rbodies();
                                 }
+
+                                let (pgen, pindex) = self.get_earliest(gen, index);
+                                if self.bodies[pgen][pindex].children.len() > 0
+                                {
+                                    ui.collapsing("siblings", |ui| {
+                                        for i in 0..self.bodies[pgen][pindex].children.len()
+                                        {
+                                            if self.bodies[pgen][pindex].children[i] == (self.gen, self.custom_show - 1)
+                                            {
+                                                continue;
+                                            }
+                                            let (cgen, cindex) = self.bodies[pgen][pindex].children[i];
+                                            ui.horizontal(|ui| {
+                                                ui.label(format!("byear: {} place: {}", cgen, cindex + 1));
+                                                if ui.button("see when born".to_string()).clicked()
+                                                {
+                                                    self.gen = cgen;
+                                                    self.show = ShowTypes::Custom;
+                                                    self.custom_show = cindex + 1;
+                                                    self.update_rbodies();
+                                                }
+                                            });
+                                            
+                                        }
+                                    });
+                                }
+                            }
+                            if self.rbodies[0].children.len() > 0
+                            {
+                                let gen = self.gen;
+                                let index = self.custom_show - 1;
+                                let (gen, index) = self.get_earliest(gen, index);
+                                ui.collapsing("children", |ui| {
+                                    for i in 0..self.bodies[gen][index].children.len()
+                                    {
+                                        let (cgen, cindex) = self.bodies[gen][index].children[i];
+                                        ui.horizontal(|ui| {
+                                            ui.label(format!("byear: {} place: {}", cgen, cindex + 1));
+                                            if ui.button("see when born".to_string()).clicked()
+                                            {
+                                                self.gen = cgen;
+                                                self.show = ShowTypes::Custom;
+                                                self.custom_show = cindex + 1;
+                                                self.update_rbodies();
+                                            }
+                                        });
+                                        
+                                    }
+                                });
                             }
                         });
                     }
                     
                 });
+
+        if self.showing_stats
+        {
+            egui::Window::new("Stats")
+                .default_pos((400.0, 400.0))
+                .show(egui_ctx, |ui| {
+                    //let sin: PlotPoints = PlotPoints::Owned(vec![PlotPoint::new(0.0, 0.0), PlotPoint::new(1.0, 1.0), PlotPoint::new(3.0, 0.0)]) ;
+                    let sin = PlotPoints::from_ys_f32(&[0.0, 1.0, 0.0]);
+                    let line = Line::new(sin);
+                    Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
+                });
+        }
+        
+        
         });
         egui_macroquad::draw();
     }
@@ -1044,16 +1121,12 @@ impl Ecosystem
         let defaults = Settings {..Default::default()};
         egui_macroquad::ui(|egui_ctx| {
             egui::Window::new("creation screen").resizable(false).collapsible(false).fixed_pos((0.0, 0.0)).default_size((screen_width(), screen_height())).show(egui_ctx, |ui| {
-                egui::ScrollArea::vertical().max_height(screen_height()).show(ui, |ui| {
+                egui::ScrollArea::both().max_height(screen_height()).max_width(screen_width()).show(ui, |ui| {
                     egui::Grid::new("some_unique_id").striped(true).show(ui, |ui| {
                         ui.label("Seed");
                         if ui.button(if self.settings.random_seed {"random"} else {"custom"}).clicked()
                         {
                             self.settings.random_seed = !self.settings.random_seed;
-                        }
-                        if self.settings.random_seed != defaults.random_seed && ui.button("↺").clicked()
-                        {
-                            self.settings.random_seed = defaults.random_seed;
                         }
                         ui.end_row();
                         
@@ -1080,140 +1153,264 @@ impl Ecosystem
                         ui.end_row();
 
                         ui.label("Gravity");
-                        ui.add(egui::DragValue::new(&mut self.settings.grav).speed(0.01));
-                        if self.settings.grav != defaults.grav && ui.button("↺").clicked()
+                        ui.horizontal(|ui|
                         {
-                            self.settings.grav = defaults.grav;
-                        }
+                            ui.add(egui::DragValue::new(&mut self.settings.grav).speed(0.01));
+                            if self.settings.grav != defaults.grav && ui.button("↺").clicked()
+                            {
+                                self.settings.grav = defaults.grav;
+                            }
+                        });
+                        
                         ui.end_row();
 
                         ui.label("Air Slip");
-                        ui.add(egui::Slider::new(&mut self.settings.drag, 0.0..=1.0).clamp_to_range(false));
-                        if self.settings.drag != defaults.drag && ui.button("↺").clicked()
-                        {
-                            self.settings.drag = defaults.drag;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::Slider::new(&mut self.settings.drag, 0.0..=1.0).clamp_to_range(false));
+                            if self.settings.drag != defaults.drag && ui.button("↺").clicked()
+                            {
+                                self.settings.drag = defaults.drag;
+                            }
+                        });
+                        
                         ui.end_row();
 
                         ui.end_row();
-                        ui.label("Generation");
+                        ui.label("Base Population Generation Settings").on_hover_text("settings for the first generation, used to direct the evolution");
+                        ui.label("");
+                        ui.label("Mutation limits").on_hover_text("limits for a body after mutation");
                         ui.end_row();
 
                         ui.label("Population Size");
-                        ui.add(egui::DragValue::new(&mut self.settings.population_size).speed(10));
-                        if self.settings.population_size != defaults.population_size && ui.button("↺").clicked()
-                        {
-                            self.settings.population_size = defaults.population_size;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.population_size).speed(10).clamp_range(1..=usize::MAX));
+                            if self.settings.population_size != defaults.population_size && ui.button("↺").clicked()
+                            {
+                                self.settings.population_size = defaults.population_size;
+                            }
+                        });
                         ui.end_row();
                         
                         ui.label("Max Body Width");
-                        ui.add(egui::DragValue::new(&mut self.settings.x_bound).speed(10));
-                        if self.settings.x_bound != defaults.x_bound && ui.button("↺").clicked()
-                        {
-                            self.settings.x_bound = defaults.x_bound;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.x_bound).speed(10).clamp_range(0.0..=f32::MAX));
+                            if self.settings.x_bound != defaults.x_bound && ui.button("↺").clicked()
+                            {
+                                self.settings.x_bound = defaults.x_bound;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cx_bound).speed(10).clamp_range(0.0..=f32::MAX));
+                            if self.settings.cx_bound != defaults.cx_bound && ui.button("↺").clicked()
+                            {
+                                self.settings.cx_bound = defaults.cx_bound;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Max Body Height");
-                        ui.add(egui::DragValue::new(&mut self.settings.y_bound).speed(10));
-                        if self.settings.y_bound != defaults.y_bound && ui.button("↺").clicked()
-                        {
-                            self.settings.y_bound = defaults.y_bound;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.y_bound).speed(10).clamp_range(0.0..=f32::MAX));
+                            if self.settings.y_bound != defaults.y_bound && ui.button("↺").clicked()
+                            {
+                                self.settings.y_bound = defaults.y_bound;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cy_bound).speed(10).clamp_range(0.0..=f32::MAX));
+                            if self.settings.cy_bound != defaults.cy_bound && ui.button("↺").clicked()
+                            {
+                                self.settings.cy_bound = defaults.cy_bound;
+                            }
+                        });
                         ui.end_row();
 
-                        let mut min = self.settings.slip_min.clone();
+                        let min = self.settings.slip_min.clone();
                         ui.label("Node Slip Min");
-                        ui.add(egui::DragValue::new(&mut self.settings.slip_min).speed(0.01));
-                        if self.settings.slip_min != defaults.slip_min && ui.button("↺").clicked()
-                        {
-                            self.settings.slip_min = defaults.slip_min;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.slip_min).speed(0.01).clamp_range(0.0..=1.0));
+                            if self.settings.slip_min != defaults.slip_min && ui.button("↺").clicked()
+                            {
+                                self.settings.slip_min = defaults.slip_min;
+                            }
+                        });
+                        let mut cmin = self.settings.cslip_min.clone();
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cslip_min).speed(0.01).clamp_range(0.0..=1.0));
+                            if self.settings.cslip_min != defaults.cslip_min && ui.button("↺").clicked()
+                            {
+                                self.settings.cslip_min = defaults.cslip_min;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Node Slip Max");
-                        ui.add(egui::DragValue::new(&mut self.settings.slip_max).clamp_range(min..=f32::MAX));
-                        if self.settings.slip_max != defaults.slip_max && ui.button("↺").clicked()
-                        {
-                            self.settings.slip_max = defaults.slip_max;
-                        }
+                        ui .horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.slip_max).speed(0.01).clamp_range(min..=1.0));
+                            if self.settings.slip_max != defaults.slip_max && ui.button("↺").clicked()
+                            {
+                                self.settings.slip_max = defaults.slip_max;
+                            }
+                        });
+                        ui .horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cslip_max).speed(0.01).clamp_range(cmin..=1.0));
+                            if self.settings.cslip_max != defaults.cslip_max && ui.button("↺").clicked()
+                            {
+                                self.settings.cslip_max = defaults.cslip_max;
+                            }
+                        });
                         ui.end_row();
 
 
                         let mut min = self.settings.strength_min.clone();
                         ui.label("Muscle Strength Min");
-                        ui.add(egui::DragValue::new(&mut self.settings.strength_min).speed(10));
-                        if self.settings.strength_min != defaults.strength_min && ui.button("↺").clicked()
-                        {
-                            self.settings.strength_min = defaults.strength_min;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.strength_min).speed(1.0).clamp_range(0.0..=f32::MAX));
+                            if self.settings.strength_min != defaults.strength_min && ui.button("↺").clicked()
+                            {
+                                self.settings.strength_min = defaults.strength_min;
+                            }
+                        });
+                        cmin = self.settings.cstrength_min.clone();
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cstrength_min).speed(1.0).clamp_range(0.0..=f32::MAX));
+                            if self.settings.cstrength_min != defaults.cstrength_min && ui.button("↺").clicked()
+                            {
+                                self.settings.cstrength_min = defaults.cstrength_min;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Muscle Strength Max");
-                        ui.add(egui::DragValue::new(&mut self.settings.strength_max).speed(10).clamp_range(min..=f32::MAX));
-                        if self.settings.strength_max != defaults.strength_max && ui.button("↺").clicked()
-                        {
-                            self.settings.strength_max = defaults.strength_max;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.strength_max).speed(1.0).clamp_range(min..=f32::MAX).clamp_range(0.0..=f32::MAX));
+                            if self.settings.strength_max != defaults.strength_max && ui.button("↺").clicked()
+                            {
+                                self.settings.strength_max = defaults.strength_max;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cstrength_max).speed(1.0).clamp_range(cmin..=f32::MAX).clamp_range(0.0..=f32::MAX));
+                            if self.settings.cstrength_max != defaults.cstrength_max && ui.button("↺").clicked()
+                            {
+                                self.settings.cstrength_max = defaults.cstrength_max;
+                            }
+                        });
                         ui.end_row();
 
 
                         min = self.settings.contracted_time_min.clone();
                         ui.label("Contracted Time Min");
-                        ui.add(egui::DragValue::new(&mut self.settings.contracted_time_min));
-                        if self.settings.contracted_time_min != defaults.contracted_time_min && ui.button("↺").clicked()
-                        {
-                            self.settings.contracted_time_min = defaults.contracted_time_min;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.contracted_time_min).speed(0.01).clamp_range(0.0..=f32::MAX));
+                            if self.settings.contracted_time_min != defaults.contracted_time_min && ui.button("↺").clicked()
+                            {
+                                self.settings.contracted_time_min = defaults.contracted_time_min;
+                            }
+                        });
+                        cmin = self.settings.ccontracted_time_min.clone();
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.ccontracted_time_min).speed(0.01).clamp_range(0.0..=f32::MAX));
+                            if self.settings.ccontracted_time_min != defaults.ccontracted_time_min && ui.button("↺").clicked()
+                            {
+                                self.settings.ccontracted_time_min = defaults.ccontracted_time_min;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Extended Time Max");
-                        ui.add(egui::DragValue::new(&mut self.settings.extended_time_max).clamp_range(min..=f32::MAX));
-                        if self.settings.extended_time_max != defaults.extended_time_max && ui.button("↺").clicked()
-                        {
-                            self.settings.extended_time_max = defaults.extended_time_max;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.contracted_time_max).speed(0.01).clamp_range(min..=f32::MAX));
+                            if self.settings.contracted_time_max != defaults.contracted_time_max && ui.button("↺").clicked()
+                            {
+                                self.settings.contracted_time_max = defaults.contracted_time_max;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.ccontracted_time_max).speed(0.01).clamp_range(cmin..=f32::MAX));
+                            if self.settings.ccontracted_time_max != defaults.ccontracted_time_max && ui.button("↺").clicked()
+                            {
+                                self.settings.ccontracted_time_max = defaults.ccontracted_time_max;
+                            }
+                        });
                         ui.end_row();
 
 
                         min = self.settings.contracted_len_min.clone();
                         ui.label("Contracted Len Min");
-                        ui.add(egui::DragValue::new(&mut self.settings.contracted_len_min));
-                        if self.settings.contracted_len_min != defaults.contracted_len_min && ui.button("↺").clicked()
-                        {
-                            self.settings.contracted_len_min = defaults.contracted_len_min;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.contracted_len_min).speed(1.0).clamp_range(0.0..=f32::MAX));
+                            if self.settings.contracted_len_min != defaults.contracted_len_min && ui.button("↺").clicked()
+                            {
+                                self.settings.contracted_len_min = defaults.contracted_len_min;
+                            }
+                        });
+                        cmin = self.settings.ccontracted_len_min.clone();
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.ccontracted_len_min).speed(1.0).clamp_range(0.0..=f32::MAX));
+                            if self.settings.ccontracted_len_min != defaults.ccontracted_len_min && ui.button("↺").clicked()
+                            {
+                                self.settings.ccontracted_len_min = defaults.ccontracted_len_min;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Contracted Len Max");
-                        ui.add(egui::DragValue::new(&mut self.settings.contracted_len_max).clamp_range(min..=f32::MAX));
-                        if self.settings.contracted_len_max != defaults.contracted_len_max && ui.button("↺").clicked()
-                        {
-                            self.settings.contracted_len_max = defaults.contracted_len_max;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.contracted_len_max).speed(1.0).clamp_range(min..=f32::MAX));
+                            if self.settings.contracted_len_max != defaults.contracted_len_max && ui.button("↺").clicked()
+                            {
+                                self.settings.contracted_len_max = defaults.contracted_len_max;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.ccontracted_len_max).speed(1.0).clamp_range(cmin..=f32::MAX));
+                            if self.settings.ccontracted_len_max != defaults.ccontracted_len_max && ui.button("↺").clicked()
+                            {
+                                self.settings.ccontracted_len_max = defaults.ccontracted_len_max;
+                            }
+                        });
                         ui.end_row();
 
 
-                        let mut min = self.settings.min_circles.clone();
+                        let min = self.settings.min_circles.clone();
                         ui.label("Circle Number Min");
-                        ui.add(egui::DragValue::new(&mut self.settings.min_circles));
-                        if self.settings.min_circles != defaults.min_circles && ui.button("↺").clicked()
-                        {
-                            self.settings.min_circles = defaults.min_circles;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.min_circles).speed(1).clamp_range(0..=usize::MAX));
+                            if self.settings.min_circles != defaults.min_circles && ui.button("↺").clicked()
+                            {
+                                self.settings.min_circles = defaults.min_circles;
+                            }
+                        });
+                        let cmin = self.settings.cmin_circles.clone();
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cmin_circles).speed(1).clamp_range(0..=usize::MAX));
+                            if self.settings.cmin_circles != defaults.cmin_circles && ui.button("↺").clicked()
+                            {
+                                self.settings.cmin_circles = defaults.cmin_circles;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Circle Number Max");
-                        ui.add(egui::DragValue::new(&mut self.settings.max_circles).clamp_range(min..=usize::MAX));
-                        if self.settings.max_circles != defaults.max_circles && ui.button("↺").clicked()
-                        {
-                            self.settings.max_circles = defaults.max_circles;
-                        }
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.max_circles).speed(1).clamp_range(min..=usize::MAX));
+                            if self.settings.max_circles != defaults.max_circles && ui.button("↺").clicked()
+                            {
+                                self.settings.max_circles = defaults.max_circles;
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.add(egui::DragValue::new(&mut self.settings.cmax_circles).speed(1).clamp_range(cmin..=usize::MAX));
+                            if self.settings.cmax_circles != defaults.cmax_circles && ui.button("↺").clicked()
+                            {
+                                self.settings.cmax_circles = defaults.cmax_circles;
+                            }
+                        });
                         ui.end_row();
 
                         ui.label("Time Given");
-                        ui.add(egui::DragValue::new(&mut self.settings.time_given));
+                        ui.add(egui::DragValue::new(&mut self.settings.time_given).speed(0.01).clamp_range(0.0..=f32::MAX));
                         if self.settings.time_given != defaults.time_given && ui.button("↺").clicked()
                         {
                             self.settings.time_given = defaults.time_given;
@@ -1273,6 +1470,7 @@ impl Ecosystem
                         ui.end_row();
                         ui.end_row();
                         ui.label("");
+                        
                     });
 
                 //ui.allocate_space(egui::Vec2::new(screen_width(), screen_height()));
