@@ -49,6 +49,9 @@ pub struct Ecosystem
     
     zoom : f32,
     mouse_on_ui : bool,
+
+    //stats
+    open_panel: Panel,
 }
 
 impl Ecosystem
@@ -87,6 +90,9 @@ impl Ecosystem
             
             zoom : 1.0,
             mouse_on_ui : false,
+
+            //Stats
+            open_panel: Panel::AverageDist,
         }
     }
 
@@ -630,11 +636,31 @@ impl Ecosystem
         {
             egui::Window::new("Stats")
                 .default_pos((400.0, 400.0))
+                .default_size((screen_width() * 3.0 / 4.0, screen_height() * 3.0 / 4.0))
                 .show(egui_ctx, |ui| {
-                    //let sin: PlotPoints = PlotPoints::Owned(vec![PlotPoint::new(0.0, 0.0), PlotPoint::new(1.0, 1.0), PlotPoint::new(3.0, 0.0)]) ;
-                    let sin = PlotPoints::from_ys_f32(&[0.0, 1.0, 0.0]);
-                    let line = Line::new(sin);
-                    Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut self.open_panel, Panel::AverageDist, "Avg Dist");
+                        ui.selectable_value(&mut self.open_panel, Panel::BestDist, "Best Dist");
+                    });
+                    match self.open_panel
+                    {
+                         
+                        Panel::AverageDist => {
+                            let ys : Vec<f32> = self.bodies.iter().map(|b| b.iter().map(|b| b.distance.unwrap()).sum::<f32>() / b.len() as f32).collect();
+                            let sin = PlotPoints::from_ys_f32(&ys);
+                            let line = Line::new(sin);
+
+                            Plot::new("my_plot")
+                                .show(ui, |plot_ui| plot_ui.line(line));
+                        },
+                        Panel::BestDist => {
+                            let ys : Vec<f32> = self.bodies.iter().map(|b| b[0].distance.unwrap()).collect();
+                            let sin = PlotPoints::from_ys_f32(&ys);
+                            let line = Line::new(sin);
+                            Plot::new("my_plot").show(ui, |plot_ui| plot_ui.line(line));
+                        },
+                        
+                    }
                 });
         }
         
@@ -1510,4 +1536,10 @@ pub enum Screens
     FamilyTree,
     GenerationDisplay,
     Stats,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Panel {
+    AverageDist,
+    BestDist,
 }
