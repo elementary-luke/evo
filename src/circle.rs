@@ -2,7 +2,7 @@ use crate::point::*;
 use crate::force::*;
 use crate::settings::*;
 use macroquad::color::*;
-use macroquad::qrand as rand;
+use macroquad::rand;
 use macroquad::prelude::draw_circle;
 
 #[derive(Clone, Debug)]
@@ -116,10 +116,12 @@ impl Circle
 
         self.pos += self.velocity;
     }
+
     pub fn draw(&mut self, body_pos : Point)
     {
         draw_circle((self.pos + body_pos).x, (self.pos + body_pos).y, self.r, self.color)
     }
+
     pub fn new_random(pos : Point, settings : &Settings) -> Circle
     {
         let slip = rand::gen_range(settings.slip_min, settings.slip_max);
@@ -133,6 +135,7 @@ impl Circle
             on_floor : false,
         }
     }
+
     pub fn mutate(&mut self, settings : &Settings)
     {
         for _ in 0..2// change to how many mutations you want
@@ -154,6 +157,7 @@ impl Circle
                 _ => (),
             }
         }
+        //make sure properties don't go out of limits defined at the start
         self.pos.x = self.pos.x.clamp(-settings.x_bound / 2.0, settings.x_bound / 2.0);
         self.pos.y = self.pos.y.clamp(-settings.y_bound / 2.0, settings.y_bound / 2.0);
         self.slip = self.slip.clamp(settings.cslip_min, settings.cslip_max);

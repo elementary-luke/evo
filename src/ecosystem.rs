@@ -8,7 +8,7 @@ use macroquad::color_u8;
 use macroquad::prelude::Rect;
 use macroquad::window::*;
 use macroquad::text::*;
-use macroquad::qrand as rand;
+use macroquad::rand;
 use macroquad::math::vec2;
 use macroquad::camera::*;
 use macroquad::shapes::*;
@@ -17,7 +17,7 @@ use macroquad::input::*;
 extern crate clipboard;
 use clipboard::ClipboardProvider;
 use clipboard::ClipboardContext;
-use egui::plot::{Line, Plot, PlotPoints, PlotPoint};
+use egui::plot::{Line, Plot, PlotPoints};
 
 pub struct Ecosystem
 {
@@ -98,6 +98,7 @@ impl Ecosystem
 
     pub fn initialise(&mut self)
     {
+        //add terrain depending on settings
         if self.settings.ceiling
         {
             self.settings.terrain.push((-10000.0, -10000.0, 10000.0, 100.0))
@@ -142,6 +143,7 @@ impl Ecosystem
         self.rbodies = vec![self.bodies[self.gen][0].clone()];
     }
 
+    //add initial population
     pub fn create (&mut self, n : usize)
     {
         let bodies = &mut self.bodies[self.gen];
@@ -151,15 +153,16 @@ impl Ecosystem
         }
     }
 
+    // kill half the population
     pub fn kill(&mut self)
     {
-        // kill half the population, worse ones are more likely to die
         let mut to_kill : Vec<usize> = Vec::new();
         for i in 0..(self.bodies[self.gen + 1].len() / 2)
         {
-            let f : f32 = i as f32 / self.bodies[self.gen + 1].len() as f32;
-            let r : f32 = (rand::gen_range(-1.0 as f32, 1.0 as f32).powf(3.0) + 1.0) / 2.0;
-            if f > r
+            //worse creatures are more likely to die
+            let fraction : f32 = i as f32 / self.bodies[self.gen + 1].len() as f32;
+            let random : f32 = (rand::gen_range(-1.0 as f32, 1.0 as f32).powf(3.0) + 1.0) / 2.0;
+            if fraction > random
             {
                 to_kill.push(i);
             }
@@ -183,9 +186,10 @@ impl Ecosystem
         }
     }
 
+    //clone and mutate survivors
     pub fn repopulate(&mut self)
     {
-        //clone and mutate survivors
+        
         let mut new_bodies : Vec<Body> = Vec::new();
         for i in 0..self.bodies[self.gen + 1].len()
         {
@@ -200,9 +204,9 @@ impl Ecosystem
         self.bodies[self.gen + 1].append(&mut new_bodies);
     }
 
+    // get distance for every body
     pub fn simulate(&mut self)
     {
-        // get distance for every body
         let bodies = &mut self.bodies.last_mut().unwrap();
         for i in 0..bodies.len()
         {
@@ -214,12 +218,6 @@ impl Ecosystem
             bodies[i].set_start_avg();
 
             let mut dist = bodies[i].clone().simulate(&self.settings);
-    
-            //if it went backwards flip it
-            // if dist < 0.0
-            // {
-            //     bodies[i].flip(); // TODO FIX THIS AS IF BEST IS FLIPPED DOESNT DO THE SAME THING
-            // }
             if dist.is_nan()
             {
                 dist = 0.0;
@@ -229,7 +227,7 @@ impl Ecosystem
         bodies.retain(|b| !b.distance.unwrap().is_nan());
         bodies.sort_by(|a, b| b.distance.partial_cmp(&a.distance).unwrap());
 
-        //set nexts and children
+        //set ancestry data
         if self.gen + 1 != self.bodies.len() // make sure doesn't do it for when first creating population
         {
             for i in 0..self.bodies[self.gen + 1].len()
@@ -240,7 +238,6 @@ impl Ecosystem
                     self.bodies[self.gen][index].next = Some(i);
                 }
                 else
-                //if self.bodies[self.gen + 1][i].parent.is_some()
                 {
                     let (gen, index) = self.get_earliest(self.bodies[self.gen + 1][i].parent.unwrap().0, self.bodies[self.gen + 1][i].parent.unwrap().1);
                     self.bodies[gen][index].children.push((self.gen + 1, i));
@@ -249,17 +246,9 @@ impl Ecosystem
         }
     }
 
+    // update and draw bodies
     pub fn run_view(&mut self, settings : Settings)
     {
-        // if is_key_pressed(KeyCode::R)
-        // {
-        //     self.time = 0.0;
-        //     self.update_rbodies();
-        //     self.rbodies.push(self.rbodies[0].clone());
-        //     self.rbodies[0].flip();
-        //     self.rbodies[0].pos = Point {x : screen_width()/2.0, y : self.settings.FLOOR_Y - self.settings.Y_BOUND / 2.0};
-        //     self.rbodies[1].pos = Point {x : screen_width()/2.0, y : self.settings.FLOOR_Y - self.settings.Y_BOUND / 2.0};
-        // }
         
         self.draw_sky();
         self.draw_ground();
@@ -267,7 +256,7 @@ impl Ecosystem
         self.draw_signs();
 
         
-        //pause if over the time limit or all of creature on floor
+        //pause if over the time limit or all of creature's nodes are on the floor
         for i in 0..self.rbodies.len()
         {
             if !self.paused
@@ -298,7 +287,7 @@ impl Ecosystem
 
         if !self.paused
         {
-            self.time += 1.0/60.0;
+            self.time += 1.0/settings.fps;
         }
     }
 
@@ -315,6 +304,7 @@ impl Ecosystem
             clear_background(color_u8!(	135.0, 206.0, 235.0, 1.0));
         }
     }
+
     pub fn draw_signs(&mut self)
     {
         for i in 0..(((self.bodies[self.gen][0].distance.unwrap() + screen_width() / 2.0) / 200.0).ceil() as usize + 1)
@@ -669,6 +659,7 @@ impl Ecosystem
         egui_macroquad::draw();
     }
 
+    // make camera follow average position of nodes
     pub fn run_cam(&mut self)
     {
         let mut cam = Camera2D::from_display_rect(Rect::new(0.0, 0.0, screen_width(), screen_height()));
@@ -679,6 +670,7 @@ impl Ecosystem
         set_camera(&cam);
     }
 
+    //recursively get the earliest generation the creature was alive in
     fn get_earliest(&mut self, gen : usize, index : usize) -> (usize, usize)
     {
         if self.bodies[gen][index].previous.is_none()
@@ -929,6 +921,7 @@ impl Ecosystem
         }
     }
 
+    //basic controls for family tree menu
     pub fn family_tree_cam(&mut self)
     {
         if (is_mouse_button_pressed(MouseButton::Middle) || is_mouse_button_pressed(MouseButton::Right)) && !self.mouse_on_ui
@@ -976,6 +969,7 @@ impl Ecosystem
         set_camera(&cam);
     }
 
+    //menu in the top left of family tree screen
     pub fn family_tree_gui(&mut self)
     {
         egui_macroquad::ui(|egui_ctx| {
@@ -1006,6 +1000,7 @@ impl Ecosystem
         egui_macroquad::draw();
     }
 
+    //create clones of the bodies in the generation but no movement just their skeletons on the first frame
     pub fn calc_generation_display(&mut self,)
     {
         self.display_bodies.clear();
@@ -1015,6 +1010,7 @@ impl Ecosystem
         }
     }
 
+    //menu for seeing all creatures
     pub fn draw_generation_display(&mut self)
     {
         clear_background(Color::from_rgba(249, 251, 231, 255));
@@ -1055,6 +1051,7 @@ impl Ecosystem
         }
     }
 
+    //basic camera movement when seeing all creatures
     pub fn generation_display_cam(&mut self)
     {
         //drag camera using middle mouse button or right mouse button
@@ -1103,6 +1100,7 @@ impl Ecosystem
         set_camera(&cam);
     }
 
+    //menu in top left of screen with all creatures from a generation
     pub fn generation_display_gui(&mut self)
     {
         egui_macroquad::ui(|egui_ctx| {
@@ -1142,6 +1140,7 @@ impl Ecosystem
         egui_macroquad::draw();
     }
 
+    //menu when you first open the app where you can change all the settings
     pub fn creation_gui(&mut self)
     {
         let defaults = Settings {..Default::default()};
@@ -1156,7 +1155,8 @@ impl Ecosystem
                         }
                         ui.end_row();
                         
-
+                        
+                        //textbox for setting a custom ssed
                         if !self.settings.random_seed
                         {
                             ui.label("");
@@ -1488,6 +1488,15 @@ impl Ecosystem
 
                         if ui.button("begin").clicked()
                         {
+                            if macroquad::time::get_fps() > 150
+                            {
+                                self.settings.fps = 165.0;
+                            }
+                            else if macroquad::time::get_fps() > 100
+                            {
+                                self.settings.fps = 140.0;
+                            }
+                            //otherwise fps stays default 60.0
                             self.initialise();
                             self.screen = Screens::Simulation;
                         }
@@ -1518,16 +1527,6 @@ impl Ecosystem
 
     
 }
-
-#[derive(Debug, Clone, PartialEq)]
-enum ShowTypes
-{
-    Best,
-    Median,
-    Worst,
-    Custom,
-    All,
-}
 #[derive(Debug, Clone, PartialEq)]
 pub enum Screens
 {
@@ -1538,6 +1537,19 @@ pub enum Screens
     Stats,
 }
 
+// for the drop down where you can select which creature in the generation you want to see run
+#[derive(Debug, Clone, PartialEq)]
+enum ShowTypes
+{
+    Best,
+    Median,
+    Worst,
+    Custom,
+    All,
+}
+
+
+//for the stats menu
 #[derive(Debug, Clone, PartialEq)]
 pub enum Panel {
     AverageDist,

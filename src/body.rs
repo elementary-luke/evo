@@ -1,10 +1,8 @@
 use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
-use crate::settings;
 use crate::settings::Settings;
-use macroquad::qrand as rand;
-use std::cmp::min;
+use macroquad::rand as rand;
 
 #[derive(Clone, Debug)]
 pub struct Body
@@ -62,18 +60,6 @@ impl Body
         {
             let x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
             let y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);
-
-            //was to make sure Circles were overlapping but not needed
-            // loop    
-            // {
-            //     x = rand::gen_range(-x_bound / 2.0, x_bound / 2.0);
-            //     y = rand::gen_range(-y_bound / 2.0, y_bound / 2.0);
-            //     if body.circles.iter().any(|c| (c.x - x).powi(2) + (c.y - y).powi(2) < (c.r + c.r).powi(2))
-            //     {
-            //         continue;
-            //     }
-            //     break;
-            // }
             
             body.circles.push(Circle::new_random(Point {x, y}, settings)); 
         }
@@ -113,6 +99,7 @@ impl Body
         }
         body
     }
+
     pub fn set_start_avg(&mut self)
     {
         self.start_avg_x = self.circles.iter().map(|c| c.pos.x).sum::<f32>() / self.circles.len() as f32;
@@ -150,7 +137,6 @@ impl Body
         let mut time = 0.0;
         loop
         {
-            
             self.update(time, settings);
             if self.get_average_distance().is_nan()
             {
@@ -179,9 +165,8 @@ impl Body
                     return self.get_average_distance() / (self.energy_used * 0.0001);
                 }
             }
-            time += 1.0/60.0;
+            time += 1.0/settings.fps;
         }
-        
     }
     pub fn flip(&mut self)
     {
@@ -189,6 +174,7 @@ impl Body
         self.set_start_avg();
     }
     
+    // 1/3 chance of a mutation that changes the structure
     pub fn mutate(&mut self, settings : &Settings)
     {
         if  rand::gen_range(0, 3) == 0
@@ -201,6 +187,7 @@ impl Body
         }
         self.set_start_avg();
     }
+
     pub fn major_change(&mut self, settings : &Settings)
     {
         match rand::gen_range(0, 4)
@@ -213,6 +200,7 @@ impl Body
         }
             
     }
+
     pub fn add_circle(&mut self, settings : &Settings)
     {
         if self.circles.len() >= settings.cmax_circles
@@ -229,6 +217,7 @@ impl Body
             self.muscles.push( Muscle::new_random(self.circles.len() - 1, circles_index, settings));
         }
     }
+
     pub fn remove_circle(&mut self, settings : &Settings)
     {
         if self.circles.len() == 0 || self.circles.len() <= settings.cmin_circles
@@ -251,6 +240,7 @@ impl Body
         self.circles.remove(index);
     }
 
+
     pub fn add_muscle(&mut self, settings : &Settings)
     {
         if self.circles.len() < 2
@@ -260,6 +250,7 @@ impl Body
         let from = rand::gen_range(0, self.circles.len());
         let to = rand::gen_range(0, self.circles.len());
 
+        //abandon the mutation if it's a self-loop or a connection already exists between the 2 nodes
         if from == to || self.muscles.iter().any(|m| (m.from == from && m.to == to) || (m.from == to && m.to == from))
         {
             return;
@@ -267,6 +258,7 @@ impl Body
 
         self.muscles.push(Muscle::new_random(from, to, settings));
     }
+
     pub fn remove_muscle(&mut self)
     {
         if self.muscles.len() == 0
@@ -300,9 +292,9 @@ impl Body
         }
     }
 
+    // for when showing all bodies in gen
     pub fn set_alpha(&mut self, alpha : f32)
     {
-        // for when showing all bodies in gen
         self.circles.iter_mut().for_each(|c| c.color.a = alpha);
         self.muscles.iter_mut().for_each(|m| m.color.a = alpha);
     }

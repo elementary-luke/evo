@@ -6,7 +6,7 @@ use crate::point::*;
 use crate::force::*;
 use crate::settings;
 use crate::settings::*;
-use macroquad::qrand as rand;
+use macroquad::rand;
 use macroquad::color::*;
 use macroquad::prelude::draw_line;
 
@@ -29,7 +29,7 @@ impl Muscle
 {
     pub fn update(&mut self, time : f32, circles : &mut Vec<Circle>, settings : &Settings, energy_used : &mut f32)
     {
-        // TODO CHECK IF WORKS WHEN EXTENDING BUT LENGTH IS BIGGER THAN EXTENDED LENGTH
+        //flip state of muscle depending on how much time has passed from when it started contracting/extending
         if self.contracting.0 && time - self.contracting.1 >= self.contracted_time
         {
             self.contracting = (false, time);
@@ -51,13 +51,12 @@ impl Muscle
             target_len = self.extended_len;    
         }
 
-        //println!("{}", current_len);
         let mut accel_from = Point { x: 0.0, y: 0.0 };
         let mut accel_to = Point { x: 0.0, y: 0.0 };
 
         //put forces on circles
-        let nfrom = & circles[self.from];
-        let nto = & circles[self.to];
+        let nfrom = &circles[self.from];
+        let nto = &circles[self.to];
         let current_len = (circles[self.to].pos - circles[self.from].pos).magnitude();
         let angle = (nfrom.pos.y-nto.pos.y).atan2(nfrom.pos.x-nto.pos.x);
         let force = f32::min(f32::max(1.0-(current_len / target_len),-0.2), 0.2);
@@ -77,10 +76,12 @@ impl Muscle
             strength : accel_to,
         });
     }
+
     pub fn draw(&mut self, body_pos : Point, from : Point, to : Point)
     {
         draw_line(body_pos.x + from.x, body_pos.y + from.y, body_pos.x + to.x, body_pos.y + to.y, 3.0, self.color);
     }
+
     pub fn new_random(from : usize, to : usize, settings : &Settings) -> Muscle
     {   
         let contracted_len = rand::gen_range(settings.contracted_len_min, settings.contracted_len_max);
@@ -104,9 +105,10 @@ impl Muscle
 
         return m;
     }
+
     pub fn mutate(&mut self, settings : &Settings)
     {
-        for _ in 0..2
+        for _ in 0..2 // number of mutations
         {
             match rand::gen_range(0, 5)
             {

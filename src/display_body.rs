@@ -2,18 +2,14 @@ use crate::body::Body;
 use crate::point::*;
 use crate::circle::*;
 use crate::muscle::*;
-use crate::settings::Settings;
-use macroquad::color;
 use macroquad::prelude::BLACK;
 use macroquad::prelude::Color;
 use macroquad::prelude::DARKGRAY;
 use macroquad::prelude::Rect;
 use macroquad::prelude::vec2;
-use macroquad::qrand as rand;
-use macroquad::shapes::draw_line;
+use macroquad::rand;
 use macroquad::shapes::draw_rectangle;
 use macroquad::text::draw_text;
-use std::cmp::min;
 use std::fmt;
 
 #[derive(Clone)]
@@ -58,7 +54,7 @@ impl DisplayBody
         body
     }
 
-    pub fn from(body : Body, index : (usize, usize)) -> DisplayBody // new body from body
+    pub fn from(body : Body, index : (usize, usize)) -> DisplayBody // new display_body that is created by cloning a body
     {
         DisplayBody
         {

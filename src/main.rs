@@ -10,9 +10,7 @@ mod tree_body;
 mod display_body;
 
 use crate::ecosystem::*;
-use macroquad::color::*;
-use macroquad::color_u8;
-use macroquad::window::*;
+use macroquad::{time::get_fps, window::*};
 use egui_macroquad::*;
 
 
@@ -30,6 +28,7 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf())]
 async fn main() {
    let mut sys = Ecosystem::new();
+   println!("{}", get_fps());
     loop {
         match sys.screen
         {
@@ -52,7 +51,7 @@ async fn main() {
                 sys.generation_display_cam();
             },
             _ => {
-                println!("sum ting wong 46 main.rs");
+                println!("ERR1");
             }
         }
         

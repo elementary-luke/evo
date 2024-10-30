@@ -6,7 +6,7 @@ use macroquad::prelude::BLACK;
 use macroquad::prelude::Color;
 use macroquad::prelude::Rect;
 use macroquad::prelude::vec2;
-use macroquad::qrand as rand;
+use macroquad::rand;
 use macroquad::shapes::draw_rectangle;
 use macroquad::text::draw_text;
 use std::fmt;

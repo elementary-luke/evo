@@ -1,6 +1,6 @@
 #[derive(Clone, Debug)]
 pub struct Settings {
-    
+    pub fps : f32,
     pub random_seed : bool,
     pub seed : u64,
 
@@ -74,6 +74,7 @@ impl Default for Settings
     fn default() -> Self
     {
         Settings { 
+            fps : 60.0,
             random_seed: true, 
             seed: 1684620265, 
             population_size: 600, 
