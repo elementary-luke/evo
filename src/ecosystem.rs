@@ -726,7 +726,8 @@ impl Ecosystem
             _ => println!("ERR update_rbodies(&mut self) in ecosystem.rs {:?}", self.show),
         }
     }
-    
+
+    //getting which bodies to show in the tree when you first go into the menu
     pub fn calc_family_tree(&mut self)
     {
         let (mut gen, mut index) = (self.gen, self.custom_show - 1);
@@ -793,6 +794,7 @@ impl Ecosystem
         }
     }
 
+    //getting which bodies to show in the tree when you select a sibling
     pub fn recalc_family_tree(&mut self)
     {
         self.tree_bodies = self.tree_bodies[..self.tree_slide.unwrap() + 1].to_vec();
